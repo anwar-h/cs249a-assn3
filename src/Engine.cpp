@@ -33,8 +33,7 @@ Segment::returnSegmentIs(Ptr &r) {
 		r->return_segment_->return_segment_ = Ptr();
 	}
 	return_segment_ = r;
-	Ptr me = Ptr(this);
-	if(r) r->return_segment_ = me;
+	if(r) r->return_segment_ = this;
 }
 
 void

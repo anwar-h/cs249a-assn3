@@ -23,5 +23,5 @@ example
 example2
 test1
 snippets
-UnitTest
+src/unit-test/UnitTest
 src/unit-test/gtest-1.6.0/*

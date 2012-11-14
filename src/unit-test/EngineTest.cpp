@@ -1,20 +1,10 @@
 #include "gtest/gtest.h"
 #include "Engine.h"
 
+using namespace Shipping;
+
 class SegmentTest : public ::testing::Test {
 protected:
-	typedef Shipping::Mile Mile;
-	typedef Shipping::Difficulty Difficulty;
-	typedef Shipping::MilesPerHour MilesPerHour;
-	typedef Shipping::PackageCount PackageCount;
-	typedef Shipping::Dollars Dollars;
-
-
-	typedef Shipping::Segment Segment;
-	typedef Shipping::Location Location;
-	typedef Segment::Mode Mode;
-	typedef Segment::ExpediteSupport ExpediteSupport;
-
 	virtual void SetUp() {
 		truck = Segment::truck();
 		boat = Segment::boat();
@@ -22,13 +12,15 @@ protected:
 		expediteSupported = Segment::expediteSupported();
 		expediteNotSupported = Segment::expediteNotSupported();
 
-		seg1 = Segment::SegmentNew("truckSeg", truck);
-		seg2 = Segment::SegmentNew("boatSeg", boat);
-		seg3 = Segment::SegmentNew("planeSeg", plane);
+		network = Network::NetworkNew("network");
 
-		loc1 = Location::LocationNew("loc1", Location::customer());
-		loc2 = Location::LocationNew("loc2", Location::port());
-		loc3 = Location::LocationNew("loc3", Location::terminal());
+		seg1 = network->segmentNew("truckSeg", truck);
+		seg2 = network->segmentNew("boatSeg", boat);
+		seg3 = network->segmentNew("planeSeg", plane);
+
+		loc1 = network->customerNew("loc1");
+		loc2 = network->portNew("loc2");
+		loc3 = network->terminalNew("loc3", plane);
 	}
 	
 	Segment::Mode truck;
@@ -39,6 +31,7 @@ protected:
 
 	Segment::Ptr seg1, seg2, seg3;
 	Location::Ptr loc1, loc2, loc3;
+	Network::Ptr network;
 };
 
 TEST_F(SegmentTest, ModeTypes) {
@@ -59,7 +52,7 @@ TEST_F(SegmentTest, InitialState) {
 	EXPECT_EQ(boat, seg2->mode());
 	EXPECT_EQ(plane, seg3->mode());
 	EXPECT_EQ(Location::Ptr(), seg1->source());
-	EXPECT_EQ(Mile(0), seg1->length());
+	EXPECT_EQ(Mile(), seg1->length());
 	EXPECT_EQ(Segment::Ptr(), seg1->returnSegment());
 	EXPECT_EQ(Difficulty(), seg1->difficulty());
 	EXPECT_EQ(expediteNotSupported, seg1->expediteSupport());
@@ -76,11 +69,11 @@ TEST_F(SegmentTest, ModeAttr) {
 
 TEST_F(SegmentTest, SourceAttr) {
 	seg1->sourceIs(loc1);
-	EXPECT_EQ(loc1, seg1->source());
+	EXPECT_EQ(loc1.ptr(), seg1->source().ptr());
 	seg2->sourceIs(loc2);
-	EXPECT_EQ(loc2, seg2->source());
+	EXPECT_EQ(loc2.ptr(), seg2->source().ptr());
 	seg3->sourceIs(loc3);
-	EXPECT_EQ(loc3, seg3->source());
+	EXPECT_EQ(loc3.ptr(), seg3->source().ptr());
 }
 
 TEST_F(SegmentTest, LengthAttr) {
@@ -93,21 +86,87 @@ TEST_F(SegmentTest, LengthAttr) {
 	EXPECT_EQ(m3, seg3->length());
 }
 
-TEST_F(SegmentTest, ReturnSegmentAttr) {
+TEST_F(SegmentTest, ReturnSegmentDiffModes) {
+	Segment::Ptr nil;
+
 	seg1->returnSegmentIs(seg2);
-	EXPECT_EQ(seg2, seg1->returnSegment());
-	EXPECT_EQ(seg1, seg2->returnSegment());
+	EXPECT_EQ(nil.ptr(), seg1->returnSegment().ptr());
+	EXPECT_EQ(nil.ptr(), seg2->returnSegment().ptr());
+
+	seg1->returnSegmentIs(seg3);
+	EXPECT_EQ(nil.ptr(), seg1->returnSegment().ptr());
+	EXPECT_EQ(nil.ptr(), seg3->returnSegment().ptr());
+
+	seg2->returnSegmentIs(seg3);
+	EXPECT_EQ(nil.ptr(), seg2->returnSegment().ptr());
+	EXPECT_EQ(nil.ptr(), seg3->returnSegment().ptr());
+
+	seg2->returnSegmentIs(seg1);
+	EXPECT_EQ(nil.ptr(), seg2->returnSegment().ptr());
+	EXPECT_EQ(nil.ptr(), seg1->returnSegment().ptr());
+
+	seg3->returnSegmentIs(seg1);
+	EXPECT_EQ(nil.ptr(), seg3->returnSegment().ptr());
+	EXPECT_EQ(nil.ptr(), seg1->returnSegment().ptr());
+
+	seg3->returnSegmentIs(seg2);
+	EXPECT_EQ(nil.ptr(), seg3->returnSegment().ptr());
+	EXPECT_EQ(nil.ptr(), seg2->returnSegment().ptr());
+}
+
+TEST_F(SegmentTest, ReturnSegmentTruckMode) {
+	seg1->modeIs(truck);
+	seg2->modeIs(seg1->mode());
+	seg1->returnSegmentIs(seg2);
+	EXPECT_EQ(seg2.ptr(), seg1->returnSegment().ptr());
+	EXPECT_EQ(seg1.ptr(), seg2->returnSegment().ptr());
+}
+
+TEST_F(SegmentTest, ReturnSegmentBoatMode) {
+	seg1->modeIs(boat);
+	seg2->modeIs(seg1->mode());
+	seg1->returnSegmentIs(seg2);
+	EXPECT_EQ(seg2.ptr(), seg1->returnSegment().ptr());
+	EXPECT_EQ(seg1.ptr(), seg2->returnSegment().ptr());
+}
+
+TEST_F(SegmentTest, ReturnSegmentPlaneMode) {
+	seg1->modeIs(plane);
+	seg2->modeIs(seg1->mode());
+	seg1->returnSegmentIs(seg2);
+	EXPECT_EQ(seg2.ptr(), seg1->returnSegment().ptr());
+	EXPECT_EQ(seg1.ptr(), seg2->returnSegment().ptr());
 }
 
 TEST_F(SegmentTest, ReturnSegmentSwitch) {
+	seg2->modeIs(seg1->mode());
+	seg3->modeIs(seg1->mode());
+
 	seg1->returnSegmentIs(seg2);
-	EXPECT_EQ(seg2, seg1->returnSegment());
-	EXPECT_EQ(seg1, seg2->returnSegment());
+
+	EXPECT_EQ(seg2.ptr(), seg1->returnSegment().ptr());
+	EXPECT_EQ(seg1.ptr(), seg2->returnSegment().ptr());
 
 	seg3->returnSegmentIs(seg1);
-	EXPECT_EQ(seg1, seg3->returnSegment());
-	EXPECT_EQ(seg3, seg1->returnSegment());
-	EXPECT_EQ(Segment::Ptr(), seg2->returnSegment());
+	EXPECT_EQ(seg1.ptr(), seg3->returnSegment().ptr());
+	EXPECT_EQ(seg3.ptr(), seg1->returnSegment().ptr());
+	EXPECT_EQ(Segment::Ptr(), seg2->returnSegment().ptr());
+}
+
+TEST_F(SegmentTest, ReturnSegmentSourceNull) {
+	Location::Ptr nil;
+	seg2->modeIs(seg1->mode());
+
+	seg1->sourceIs(loc1);
+	seg1->returnSegmentIs(seg2);
+
+	EXPECT_EQ(seg2.ptr(), seg1->returnSegment().ptr());
+	EXPECT_EQ(seg1.ptr(), seg2->returnSegment().ptr());
+
+	seg1->sourceIs(nil);
+	EXPECT_EQ(nil.ptr(), seg1->source().ptr());
+	EXPECT_EQ(Segment::Ptr().ptr(), seg1->returnSegment().ptr());
+	EXPECT_EQ(Segment::Ptr().ptr(), seg2->returnSegment().ptr());
 }
 
 TEST_F(SegmentTest, DifficultyAttr) {
@@ -127,18 +186,57 @@ TEST_F(SegmentTest, ExpediteSupportAttr) {
 	EXPECT_EQ(expediteNotSupported, seg2->expediteSupport());
 }
 
-TEST_F(SegmentTest, SourceDestruction) {
-	// when source is destroyed, this segment gets destroyed
-	EXPECT_EQ(1,0);
+TEST_F(SegmentTest, NetworkSourceDel) {
+	// when source is destroyed, this segment's source is set to null
+	seg1->sourceIs(loc1);
+	EXPECT_EQ(loc1.ptr(), seg1->source().ptr());
+	seg2->sourceIs(loc2);
+	EXPECT_EQ(loc2.ptr(), seg2->source().ptr());
+	seg3->sourceIs(loc3);
+	EXPECT_EQ(loc3.ptr(), seg3->source().ptr());
+
+	network->customerDel("loc1");
+	network->portDel("loc2");
+	network->terminalDel("loc3");
+
+	Location::Ptr nil;
+	EXPECT_EQ(nil.ptr(), seg1->source().ptr());
+	EXPECT_EQ(nil.ptr(), seg2->source().ptr());
+	EXPECT_EQ(nil.ptr(), seg3->source().ptr());
 }
 
-TEST_F(SegmentTest, ReturnSegmentDestruction) {
-	// when return segment gets destroyed
-	//seg1->returnSegmentIs(seg2);
 
-	// when we get destroyed
-	EXPECT_EQ(1,0);
-}
+class LocationTest : public ::testing::Test {
+protected:
+	virtual void SetUp() {
+		truck = Segment::truck();
+		boat = Segment::boat();
+		plane = Segment::plane();
+		expediteSupported = Segment::expediteSupported();
+		expediteNotSupported = Segment::expediteNotSupported();
+
+		network = Network::NetworkNew("network");
+
+		seg1 = network->segmentNew("truckSeg", truck);
+		seg2 = network->segmentNew("boatSeg", boat);
+		seg3 = network->segmentNew("planeSeg", plane);
+
+		loc1 = network->customerNew("loc1");
+		loc2 = network->portNew("loc2");
+		loc3 = network->terminalNew("loc3", plane);
+	}
+	
+	Segment::Mode truck;
+	Segment::Mode boat;
+	Segment::Mode plane;
+	Segment::ExpediteSupport expediteSupported;
+	Segment::ExpediteSupport expediteNotSupported;
+
+	Segment::Ptr seg1, seg2, seg3;
+	Location::Ptr loc1, loc2, loc3;
+	Network::Ptr network;
+};
+
 
 /*
 
