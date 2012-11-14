@@ -1,5 +1,6 @@
 #include "gtest/gtest.h"
 #include "Engine.h"
+#include <iostream>
 
 using namespace Shipping;
 
@@ -217,9 +218,17 @@ protected:
 
 		network = Network::NetworkNew("network");
 
-		seg1 = network->segmentNew("truckSeg", truck);
-		seg2 = network->segmentNew("boatSeg", boat);
-		seg3 = network->segmentNew("planeSeg", plane);
+		vector<Segment::Ptr> truckSegs;
+		vector<Segment::Ptr> boatSegs;
+		vector<Segment::Ptr> planeSegs;
+		stringstream stream;
+		for(size_t i = 0; i < 5; i++) {
+			stream << i;
+			string n = stream.str();
+			truckSegs.push_back(network->segmentNew(string("truckSeg") + n, truck));
+			boatSegs.push_back(network->segmentNew(string("boatSeg") + n, boat));
+			planeSegs.push_back(network->segmentNew(string("planeSeg") + n, plane));
+		}
 
 		loc1 = network->customerNew("loc1");
 		loc2 = network->portNew("loc2");
