@@ -11,3 +11,17 @@
 *.lai
 *.la
 *.a
+
+# weird files
+snippets.dSYM*
+*.cpp.swp
+old-Makefile
+
+# executables
+client
+example
+example2
+test1
+snippets
+UnitTest
+src/unit-test/gtest-1.6.0/*

@@ -1,0 +1,760 @@
+#include "Engine.h"
+
+
+namespace Shipping {
+
+void
+Segment::sourceIs(Fwk::Ptr<Location> location) {
+	if(location && source_ && location->name() == source_->name()) return;
+
+	if(source_) {
+		source_->segmentDel(this->name());
+		Ptr nil = Ptr();
+		returnSegmentIs(nil);
+	}
+
+	source_ = location;
+	if (location) {
+		location->segmentIs(this);
+	}
+}
+
+void
+Segment::returnSegmentIs(Ptr &r) {
+	if (return_segment_ && r && return_segment_->name() == r->name())
+		return;
+	if (r && r->mode() != mode())
+		return;
+
+	if (return_segment_) {
+		return_segment_->return_segment_ = Ptr();
+	}
+	else if (r && r->return_segment_) {
+		r->return_segment_->return_segment_ = Ptr();
+	}
+	return_segment_ = r;
+	Ptr me = Ptr(this);
+	if(r) r->return_segment_ = me;
+}
+
+void
+Terminal::segmentIs(const Segment::PtrConst &s)
+{
+	if (s->mode() == vehicleType()) {
+		segments_.push_back(s);
+	}
+	else {
+		cerr << "Terminal::segmentIs() trying to add segment "<< s->name() <<" of mode "<< s->mode() << "to terminal of mode " << vehicleType() << endl;
+	}
+}
+
+Path::Membership
+Path::locationMembershipStatus(const Location::PtrConst &location) const
+{
+	if(usedLocations_.find(location->name()) != usedLocations_.end())  {
+		return Path::isMember();
+	}
+	return Path::notMember();
+}
+
+void
+Path::endLocationIs(const Location::PtrConst &newEnd)
+{
+	if(numLocations() - numSegments() == 0 && newEnd) {
+		if(!start()) start_ = newEnd;
+		endLocation_ = newEnd;
+		if(endSegmentPart_.type != Path::nil()) {
+			path_.push_back(endSegmentPart_);
+
+			if (endSegmentPart_.seg->expediteSupport() != Segment::expediteSupported()) {
+				// first unexpedited segment makes this path unexpedited
+				expeditedIs(Segment::expediteNotSupported());
+			}
+
+			Dollars segCost = calculateCost(endSegment_);
+			Hours segHours = calculateHours(endSegment_);
+			Mile segDistance = endSegment_->length();
+			costIs( Dollars(cost().value() + segCost.value()) );
+			hoursIs( Hours(hours().value() + segHours.value()) );
+			distanceIs( Mile(distance().value() + segDistance.value()) );
+		}
+		path_.push_back(Part(endLocation_));
+		usedLocations_.insert(endLocation_->name());
+		numLocationsIs(numLocations() + 1);
+	}
+}
+
+void
+Path::endSegmentIs(const Segment::PtrConst &seg)
+{
+	if(numLocations() - numSegments() > 0 && seg) {
+		endSegment_ = seg;
+		endSegmentPart_ = Part(endSegment_);
+		numSegmentsIs(numSegments() + 1);
+	}
+}
+
+void
+Path::expeditedIs(Segment::ExpediteSupport es)
+{
+	if (es == Segment::expediteNotSupported() && expedited_ == Segment::expediteSupported()) {
+		expedited_ = es;
+		// recalc time and cost
+		float totalCost = 0.f;
+		float totalHours = 0.f;
+		for(size_t i = 0; i < path_.size(); i++) {
+			Part part = path_[i];
+			if(part.type == Path::segment()) {
+				Segment::PtrConst segment = part.seg;
+				totalCost += calculateCost(segment).value();
+				totalHours += calculateHours(segment).value();
+			}
+		}
+		costIs( Dollars(totalCost) );
+		hoursIs( Hours(totalHours) );
+	}
+	expedited_ = es;
+}
+
+
+Dollars
+Path::calculateCost(const Segment::PtrConst &segment) const
+{
+	Segment::Mode mode = segment->mode();
+	float costPerMile = fleet_->costPerMile(mode).value();
+	if (expedited() == Segment::expediteSupported()) {
+		costPerMile *= 1.5f; // raise cost by 50%
+	}
+	float miles = segment->length().value();
+	float difficulty = segment->difficulty().value();
+	return Dollars(costPerMile * miles * difficulty);
+}
+
+Hours
+Path::calculateHours(const Segment::PtrConst &segment) const
+{
+	Segment::Mode mode = segment->mode();
+	float milesPerHour = fleet_->speed(mode).value();
+	if (expedited() == Segment::expediteSupported()) {
+		milesPerHour *= 1.3f; // boost speed by 30%
+	}
+	float miles = segment->length().value();
+	return Hours(miles / milesPerHour);
+}
+
+string
+Path::stringValue() const
+{
+	stringstream output;
+	for(size_t i = 0; i < path_.size(); i++) {
+		Part part = path_[i];
+		if (part.type == Path::location() && part.loc) {
+			output << part.loc->name();
+		}
+		else if (part.type == Path::segment() && part.seg) {
+			string segmentName = part.seg->name();
+			string returnName = part.seg->returnSegment()->name();
+			string length = part.seg->length().stringValue();
+			output << "("<< segmentName <<":"<< length <<":"<< returnName <<")"<<" ";
+		}
+	}
+	output << "\n";
+	return output.str();
+}
+
+void
+Connectivity::constraintsActiveDel()
+{
+	constraintsActiveIs(Connectivity::none());
+}
+
+void
+Connectivity::constraintsActiveIs(int mask)
+{
+	if (mask == Connectivity::none()) {
+		mask_ = Connectivity::none();
+	}
+	else {
+		if (mask & Connectivity::distance()) {
+			mask_ = mask_ || Connectivity::distance();
+		}
+		if (mask & Connectivity::cost()) {
+			mask_ = mask_ || Connectivity::cost();
+		}
+		if (mask & Connectivity::hours()) {
+			mask_ = mask_ || Connectivity::hours();
+		}
+		if (mask & Connectivity::expedited()) {
+			mask_ = mask_ || Connectivity::expedited();
+		}
+	}
+}
+
+void
+queueOrStore(Path *path, const Location::PtrConst &end, queue<Path*> &pathQueue, vector<Path*> &expeditedPaths, vector<Path*> &notExpeditedPaths)
+{
+	if (path->end()->name() == end->name()) {
+		if (path->expedited() == Segment::expediteSupported()) {
+			expeditedPaths.push_back(path);
+		}
+		else if (path->expedited() == Segment::expediteNotSupported()) {
+			notExpeditedPaths.push_back(path);
+		}
+	}
+}
+
+Path* copyPath(Path *original, Fleet::PtrConst fleet, const Location::PtrConst &nextLocation, const Segment::PtrConst &nextSegment)
+{
+	Path *copy = Path::PathNew(fleet);
+	*copy = *original;
+	copy->endSegmentIs(nextSegment);
+	copy->endLocationIs(nextLocation);
+	return copy;
+}
+
+bool
+Connectivity::isValidExplorePath(Path *path) const
+{
+	int constraints = constraintsActive();
+	bool validPath = true;
+	if (constraints & Connectivity::distance()) {
+		if (path->distance() > constraintDistance()) {
+			validPath = false;
+		}
+	}
+	if (constraints & Connectivity::cost()) {
+		if (path->cost() > constraintCost()) {
+			validPath = false;
+		}
+	}
+	if (constraints & Connectivity::hours()) {
+		if (path->hours() > constraintHours()) {
+			validPath = false;
+		}
+	}
+	if (constraints & Connectivity::expedited()) {
+		if (constraintExpedited() == Segment::expediteSupported()
+			&& path->expedited() != Segment::expediteSupported()) {
+			validPath = false;
+		}
+	}
+	return validPath;
+}
+
+
+vector<string>
+Connectivity::paths(SearchPattern pattern) const
+{
+	typedef Location::SegmentIteratorConst SegmentIteratorConst;
+
+	Path *startPath = Path::PathNew(fleet());
+	startPath->endLocationIs(constraintStart());
+
+	queue<Path*> pathQueue;
+	pathQueue.push(startPath);
+
+	vector<Path*> notExpeditedPaths;
+	vector<Path*> expeditedPaths;
+	vector<Path*> completedPaths;
+
+	while(pathQueue.size() > 0) {
+		Path *curr = pathQueue.front();
+		Location::PtrConst jumpingOffLocation = curr->end();
+		pathQueue.pop();
+
+		SegmentIteratorConst 	
+			beginSeg = jumpingOffLocation->segmentsIteratorConstBegin(),
+			endSeg = jumpingOffLocation->segmentsIteratorConstEnd();
+
+		for(SegmentIteratorConst it = beginSeg; it != endSeg; ++it) {
+			Segment::PtrConst nextSegment = (*it);
+			if (!nextSegment->returnSegment()) continue;
+			Location::PtrConst nextLocation = nextSegment->returnSegment()->source();
+
+			if (pattern == Connectivity::explore()) {
+				if (curr->locationMembershipStatus(nextLocation) == Path::notMember()) {
+					Path* copy = copyPath(curr, fleet(), nextLocation, nextSegment);
+					Path* copy2 = copyPath(curr, fleet(), nextLocation, nextSegment);
+					if (isValidExplorePath(copy)) {
+						if (copy->expedited() == Segment::expediteSupported()) {
+							expeditedPaths.push_back(copy);
+						}
+						else if (copy->expedited() == Segment::expediteNotSupported()) {
+							notExpeditedPaths.push_back(copy);
+						}
+						pathQueue.push(copy2);
+					}
+					else { 
+						delete copy;
+						delete copy2;
+					}
+				}
+			}
+			else if (pattern == Connectivity::connect()) {
+				if (curr->locationMembershipStatus(nextLocation) == Path::notMember()) {
+					Path* copy = copyPath(curr, fleet(), nextLocation, nextSegment);
+					if (copy->end()->name() == constraintEnd()->name()) {
+						if (copy->expedited() == Segment::expediteSupported()) {
+							expeditedPaths.push_back(copy);
+						}
+						else if (copy->expedited() == Segment::expediteNotSupported()) {
+							notExpeditedPaths.push_back(copy);
+						}
+					}
+					else pathQueue.push(copy);
+				}
+			}
+		}
+		delete curr;
+	}
+
+	for(size_t i = 0; i < notExpeditedPaths.size(); i++) {
+		completedPaths.push_back(notExpeditedPaths[i]);
+	}
+
+	for(size_t i = 0; i < expeditedPaths.size(); i++) {
+		if (pattern == Connectivity::connect()) {
+			Path* unexpeditedCopy = Path::PathNew(fleet());
+			*unexpeditedCopy = *(expeditedPaths[i]);
+			unexpeditedCopy->expeditedIs(Segment::expediteNotSupported());
+			completedPaths.push_back(unexpeditedCopy);
+		}
+		completedPaths.push_back(expeditedPaths[i]);
+	}
+
+	return stringifyPaths(pattern, completedPaths);
+}
+
+vector<string>
+Connectivity::stringifyPaths(SearchPattern pattern, vector<Path*> &completedPaths) const
+{
+	vector<string> completed;
+	for(size_t i = 0; i < completedPaths.size(); i++) {
+		Path *path = completedPaths[i];
+		stringstream pathString;
+
+		if (pattern == Connectivity::connect()) {
+			pathString << path->cost().stringValue() << " " << path->hours().stringValue() << " ";
+			if (path->expedited() == Segment::expediteSupported()) {
+				pathString <<"yes";
+			}
+			else if (path->expedited() == Segment::expediteNotSupported()) {
+				pathString <<"no";	
+			}
+			pathString << ";" << " ";
+		}
+		pathString << path->stringValue();
+		completed.push_back(pathString.str());
+	}
+
+	for(size_t i = 0; i < completedPaths.size(); i++) {
+		delete completedPaths[i];
+	}
+	completedPaths.erase(completedPaths.begin(), completedPaths.end());
+	return completed;
+}
+
+
+Location::Ptr
+Network::location(const Fwk::String &name) {
+	map<Fwk::String, Location::Ptr>::iterator found = locations_.find(name);
+	if(found == locations_.end()) {
+		return Location::Ptr();
+	}
+	
+	return found->second;
+}
+
+void
+Network::expediteSupportIs(Fwk::String name, Segment::ExpediteSupport supported)
+{
+	Segment::Ptr seg = segment(name);
+	if(seg) {
+		int step = 0;
+		if(supported == Segment::expediteSupported()) step = 1;
+		else if(supported == Segment::expediteNotSupported()) step = -1;
+
+		// tell all the notifiees
+		if(notifiees()) {
+			for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+				try { n->onNumExpediteSupportedSegments(step); }
+				catch(...) { cerr << "Network::expediteSupportIs() notification for " << name << " unsuccessful" << endl; }
+			}
+		}
+		seg->expediteSupportIs(supported);
+	}
+}
+
+Segment::Ptr
+Network::segmentNew(Fwk::String name, Segment::Mode mode)
+{
+	// check to see if it already exists
+	Segment::Ptr seg = segment(name);
+	if(seg) {
+		cerr << "Network::segmentNew() Segment name " << name << " already in use!" << endl;
+		return Segment::Ptr();
+	}
+	// if not then create it and add to network
+	else {
+		seg = Segment::SegmentNew(name, mode);
+		segmentIs(name, seg);
+	}
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			try { n->onSegmentNew(seg); }
+			catch(...) { cerr << "Network::segmentNew() notification for " << name << " unsuccessful" << endl; }
+		}
+	}
+	return seg;
+}
+
+Segment::Ptr
+Network::segmentDel(Fwk::String name)
+{
+	// try to retrieve
+	Segment::Ptr seg = segment(name);
+	size_t n = segments_.erase(name);
+	if(n == 0) return 0;
+
+	seg->sourceIs(Location::Ptr());
+
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			try { n->onSegmentDel(seg); }
+			catch(...) { cerr << "Network::segmentDel() notification for " << name << " unsuccessful" << endl; }
+		}
+	}
+	return seg;
+}
+
+void
+Network::locationSegmentsDel(Location::Ptr location)
+{
+	typedef Location::SegmentIterator SegmentIterator;
+	SegmentIterator begin = location->segmentsIteratorBegin();
+	SegmentIterator end = location->segmentsIteratorEnd();
+
+	vector<Segment::Ptr> segments;
+	for(SegmentIterator it = begin; it < end; ++it) {
+		Segment::PtrConst constPtr = (*it);
+		Segment::Ptr ptr = const_cast<Segment*>(constPtr.ptr());
+		segments.push_back(ptr);
+	}
+
+	for(size_t i = 0; i < segments.size(); i++) {
+		//segmentDel(segments[i]->name());
+		segments[i]->sourceIs(Location::Ptr());
+	}
+}
+
+Location::Ptr
+Network::customerNew(Fwk::String name)
+{
+	// check to see if it already exists
+	Location::Ptr customer = location(name);
+	if(customer) {
+		cerr << "Network::customerNew() Customer name " << name << " already in use!" << endl;
+		return Customer::Ptr();
+	}
+	// if not then create it and add to network
+	else {
+		customer = Customer::CustomerNew(name);
+		locationIs(name, customer);
+	}
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			Customer::Ptr cust = dynamic_cast<Customer *>(customer.ptr());
+			try { n->onCustomerNew(cust); }
+			catch(...) { cerr << "Network::customerNew() notification for " << name << " unsuccessful" << endl; }
+		}
+	}
+	return customer;
+}
+
+Location::Ptr
+Network::customerDel(Fwk::String name)
+{
+	// try to retrieve
+	Location::Ptr customer = location(name);
+	size_t n = locations_.erase(name);
+	if(n == 0) return 0;
+
+	locationSegmentsDel(customer);
+	
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			Customer::Ptr cust = dynamic_cast<Customer *>(customer.ptr());
+			try { n->onCustomerDel(cust); }
+			catch(...) { cerr << "Network::customerDel() notification for " << name << " unsuccessful" << endl; }
+		}
+	}
+	return customer;
+}
+
+Location::Ptr
+Network::portNew(Fwk::String name)
+{
+	// check to see if it already exists
+	Location::Ptr port = location(name);
+	if(port) {
+		cerr << "Network::portNew() Port name " << name << " already in use!" << endl;
+		return Port::Ptr();
+	}
+	// if not then create it and add to network
+	else {
+		port = Port::PortNew(name);
+		locationIs(name, port);
+	}
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			Port::Ptr prt = dynamic_cast<Port *>(port.ptr());
+			try { n->onPortNew(prt); }
+			catch(...) { cerr << "Network::portNew() notification for " << name << " unsuccessful" << endl; }
+		}
+	}
+	return port;
+}
+
+Location::Ptr
+Network::portDel(Fwk::String name)
+{
+	// try to retrieve
+	Location::Ptr port = location(name);
+	size_t n = locations_.erase(name);
+	if(n == 0) return 0;
+
+	locationSegmentsDel(port);
+
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			Port::Ptr prt = dynamic_cast<Port *>(port.ptr());
+			try { n->onPortDel(prt); }
+			catch(...) { cerr << "Network::portDel() notification for " << name << " unsuccessful" << endl; }
+		}
+	}
+	return port;
+}
+
+Location::Ptr
+Network::terminalNew(Fwk::String name, Segment::Mode vehicle_type)
+{
+	// check to see if it already exists
+	Location::Ptr terminal = location(name);
+	if(terminal) {
+		cerr << "Network::terminalNew() Terminal name " << name << " already in use!" << endl;
+		return Terminal::Ptr();
+	}
+	// if not then create it and add to network
+	else {
+		terminal = Terminal::TerminalNew(name, vehicle_type);
+		locationIs(name, terminal);
+	}
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			Terminal::Ptr term = dynamic_cast<Terminal *>(terminal.ptr());
+			try { n->onTerminalNew(term); }
+			catch(...) { cerr << "Network::terminalNew() notification for " << name << " unsuccessful" << endl; }
+		}
+	}
+	return terminal;
+}
+
+Location::Ptr
+Network::terminalDel(Fwk::String name)
+{
+	// try to retrieve
+	Location::Ptr terminal = location(name);
+	size_t n = locations_.erase(name);
+	if(n == 0) return 0;
+
+	locationSegmentsDel(terminal);
+
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			Terminal::Ptr term = dynamic_cast<Terminal *>(terminal.ptr());
+			try { n->onTerminalDel(term); }
+			catch(...) { cerr << "Network::terminalDel() notification for " << name << " unsuccessful" << endl; }
+		}
+	}
+	return terminal;
+}
+
+Fleet::Ptr
+Network::fleetNew(Fwk::String name)
+{
+	// check to see if it already exists
+	if(fleet_) {
+		cerr << "Network::fleetNew() Fleet name " << fleet_->name() << " already in use!" << endl;
+		return fleet_;
+	}
+	// if not then create it and add to network
+	else {
+		fleet_ = Fleet::FleetNew(name);
+	}
+	return fleet_;
+}
+
+Fleet::Ptr
+Network::fleetDel(Fwk::String name)
+{
+	Fleet::Ptr fleet = fleet_;
+	if(fleet) {
+		fleet_ = Fleet::Ptr();
+	}
+	return fleet;
+}
+
+Fwk::Ptr<Statistics>
+Network::statisticsNew(Fwk::String name)
+{
+	// check to see if it already exists
+	if(statistics_) {
+		cerr << "Network::statisticsNew() Statistics name " << statistics_->name() << " already in use!" << endl;
+		return statistics_;
+	}
+	// if not then create it and add to network
+	else {
+		statistics_ = Statistics::StatisticsNew(name);
+	}
+	return statistics_;
+}
+
+Fwk::Ptr<Statistics>
+Network::statisticsDel(Fwk::String name)
+{
+	Fwk::Ptr<Statistics> stats = statistics_;
+	if(stats) {
+		statistics_ = Fwk::Ptr<Statistics>();
+	}
+	return stats;
+}
+
+Connectivity::Ptr
+Network::connectivityNew(Fwk::String name)
+{
+	// check to see if it already exists
+	if(connectivity_) {
+		cerr << "Network::connectivityNew() Connectivity name " << connectivity_->name() << " already in use!" << endl;
+		return connectivity_;
+	}
+	// if not then create it and add to network
+	else {
+		connectivity_ = Connectivity::ConnectivityNew(name);;
+	}
+	return connectivity_;
+}
+
+Connectivity::Ptr
+Network::connectivityDel(Fwk::String name)
+{
+	Connectivity::Ptr conn = connectivity_;
+	if(conn) {
+		connectivity_ = Connectivity::Ptr();
+	}
+	return conn;
+}
+
+void
+Network::NotifieeConst::notifierIs(const Network::PtrConst& _notifier) {
+   Network::Ptr notifierSave(const_cast<Network *>(notifier_.ptr()));
+   if(_notifier==notifier_) return;
+   notifier_ = _notifier;
+   if(notifierSave) {
+      notifierSave->deleteNotifiee(this);
+   }
+   if(_notifier) {
+      _notifier->newNotifiee(this);
+   }
+   if(isNonReferencing_) {
+      if(notifierSave) notifierSave->newRef();
+      if(notifier_) notifier_->deleteRef();
+   }
+}
+
+Network::NotifieeConst::~NotifieeConst() {
+   if(notifier_) {
+      notifier_->deleteNotifiee(this);
+   }
+   if(notifier_&&isNonReferencing()) notifier_->newRef();
+}
+
+void
+Statistics::onSegmentNew(Segment::Ptr segment)
+{
+	Segment::Mode type = segment->mode();
+	numSegmentsIs(type, numSegments(type) + 1);
+}
+
+void
+Statistics::onCustomerNew(Customer::Ptr customer)
+{
+	numCustomersIs(numCustomers() + 1);
+}
+
+void
+Statistics::onPortNew(Port::Ptr port)
+{
+	numPortsIs(numPorts() + 1);
+}
+void
+Statistics::onTerminalNew(Terminal::Ptr terminal)
+{
+	Segment::Mode type = terminal->vehicleType();
+	numTerminalsIs(type, numTerminals(type) + 1);
+}
+
+void
+Statistics::onSegmentDel(Segment::Ptr segment)
+{
+	Segment::Mode type = segment->mode();
+	numSegmentsIs(type, numSegments(type) - 1);
+	if (segment->expediteSupport() == Segment::expediteSupported()) {
+		numExpeditedSegments_ -= 1;
+	}
+}
+
+void
+Statistics::onCustomerDel(Customer::Ptr customer)
+{
+	numCustomersIs(numCustomers() - 1);
+}
+
+void
+Statistics::onPortDel(Port::Ptr port)
+{
+	numPortsIs(numPorts() - 1);
+}
+
+void
+Statistics::onTerminalDel(Terminal::Ptr terminal)
+{
+	Segment::Mode type = terminal->vehicleType();
+	numTerminalsIs(type, numTerminals(type) - 1);
+}
+
+void
+Statistics::onNumExpediteSupportedSegments(int n)
+{
+	//cout << "step=" << n << endl;
+	numExpeditedSegments_ += n;
+}
+
+float
+Statistics::percentExpeditedSegments()
+{
+	float total = (float) numSegments_[Segment::truck()]
+		+ (float) numSegments_[Segment::boat()]
+		+ (float) numSegments_[Segment::plane()];
+		//cout << "num="<< numExpeditedSegments_ << " total=" << total << endl;
+	return (float) numExpeditedSegments_ / total * 100.f;
+}
+
+} /* end namespace */

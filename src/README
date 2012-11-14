@@ -1,0 +1,21 @@
+user:mgumport
+user:ahahn
+
+INSTRUCTIONS
+run `make all` in the main project directory
+
+SAMPLE CLIENT
+run `./client` in the main project directory
+
+DESCRIPTION
+We split all of the entities described in the assignment handout into separate classes.  We also created ADTs for every type of unit of measurement discussed.
+
+Those classes include Segment, Path, Location (Port, Terminal, Customer), Fleet, Statistics, and Connectivity.  A network object keeps track of everything.
+
+We use smart pointers everywhere.  We follow the methodology of static member functions that call a protected constructor.  We strive to use a completely attribute-only interface.  We use ADTs for all units of measurement.
+
+The network is the object that keeps track of all of our shipping entities, so although you can create a standalone object, we designed the engine layer to be used only through a network object.  Furthermore, we made Statistics a notifiee of the network, in order to keep track of the counts of different entity types when the network created/destroyed/changed them.  
+
+There was an interdependence between segments and locations, where setting a segment's source would add that segment to the location.  Because segments need to know about locations and locations need to know about segments, we needed to forward declare some classes.
+
+We left simple inline mutators and accessors in the .h file, but the implementation of anything over 2-3 lines of code went into the .cpp file.
