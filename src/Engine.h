@@ -257,7 +257,7 @@ public:
 	Segment::PtrConst segment(size_t i) const {
 		if (i < segments_.size())
 			return segments_[i];
-		else cerr << "Location::segment() index out of bounds.";
+		else cerr << "Engine.h:"<<__LINE__<<": Location::segment() index out of bounds." << endl;
 		return Segment::PtrConst();
 	}
 	virtual void segmentIs(const Segment::PtrConst &s) {

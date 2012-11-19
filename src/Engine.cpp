@@ -84,17 +84,18 @@ Path::endLocationIs(const Location::PtrConst &newEnd)
 		if(endSegmentPart_.type != Path::nil()) {
 			path_.push_back(endSegmentPart_);
 
-			if (endSegmentPart_.seg->expediteSupport() != Segment::expediteSupported()) {
+			if (expedited() && endSegmentPart_.seg->expediteSupport() != Segment::expediteSupported()) {
 				// first unexpedited segment makes this path unexpedited
 				expeditedIs(Segment::expediteNotSupported());
 			}
-
-			Dollars segCost = calculateCost(endSegment_);
-			Hours segHours = calculateHours(endSegment_);
-			Mile segDistance = endSegment_->length();
-			costIs( Dollars(cost().value() + segCost.value()) );
-			hoursIs( Hours(hours().value() + segHours.value()) );
-			distanceIs( Mile(distance().value() + segDistance.value()) );
+			else {
+				Dollars segCost = calculateCost(endSegment_);
+				Hours segHours = calculateHours(endSegment_);
+				Mile segDistance = endSegment_->length();
+				costIs( Dollars(cost().value() + segCost.value()) );
+				hoursIs( Hours(hours().value() + segHours.value()) );
+				distanceIs( Mile(distance().value() + segDistance.value()) );
+			}
 		}
 		path_.push_back(Part(endLocation_));
 		usedLocations_.insert(endLocation_->name());
@@ -120,16 +121,19 @@ Path::expeditedIs(Segment::ExpediteSupport es)
 		// recalc time and cost
 		float totalCost = 0.f;
 		float totalHours = 0.f;
+		float totalDistance = 0.f;
 		for(size_t i = 0; i < path_.size(); i++) {
 			Part part = path_[i];
 			if(part.type == Path::segment()) {
 				Segment::PtrConst segment = part.seg;
 				totalCost += calculateCost(segment).value();
 				totalHours += calculateHours(segment).value();
+				totalDistance += segment->length().value();
 			}
 		}
 		costIs( Dollars(totalCost) );
 		hoursIs( Hours(totalHours) );
+		distanceIs( Mile(totalDistance) );
 	}
 	expedited_ = es;
 }
@@ -323,6 +327,7 @@ Connectivity::paths(SearchPattern pattern) const
 				}
 			}
 		}
+
 		delete curr;
 	}
 
