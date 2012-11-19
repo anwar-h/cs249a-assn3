@@ -178,6 +178,7 @@ public:
 	static inline ExpediteSupport expediteNotSupported() { return notSupported_; }
 
 	Mode mode() const { return mode_; }
+	static string modeName(Mode m);
 	void modeIs(Mode m) {
 		mode_ = m;
 	}

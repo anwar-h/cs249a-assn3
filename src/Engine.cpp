@@ -3,20 +3,37 @@
 
 namespace Shipping {
 
+string
+Segment::modeName(Mode m)
+{
+	switch(m) {
+		case truck_: return "truck";
+		case boat_: return "boat";
+		case plane_: return "plane";
+		default: return "";
+	}
+}
+
 void
 Segment::sourceIs(Fwk::Ptr<Location> location) {
 	if(location && source_ && location->name() == source_->name()) return;
 
-	if(source_) {
-		source_->segmentDel(this->name());
-		Ptr nil = Ptr();
-		returnSegmentIs(nil);
-	}
+	if (!location ||
+		(location->locationType() != Location::terminal()) ||
+		(location->locationType() == Location::terminal()
+			&& dynamic_cast<Terminal*>(location.ptr())->vehicleType() == mode())) {
+	
+		if (source_) {
+			source_->segmentDel(this->name());
+			Ptr nil = Ptr();
+			returnSegmentIs(nil);
+		}
 
-	source_ = location;
-	if (location) {
-		location->segmentIs(this);
-	}
+		source_ = location;
+		if (location) {
+			location->segmentIs(this);
+		}
+	}	
 }
 
 void
@@ -43,7 +60,9 @@ Terminal::segmentIs(const Segment::PtrConst &s)
 		segments_.push_back(s);
 	}
 	else {
-		cerr << "Terminal::segmentIs() trying to add segment "<< s->name() <<" of mode "<< s->mode() << "to terminal of mode " << vehicleType() << endl;
+		cerr << "Terminal::segmentIs() trying to add segment "<< s->name()
+		<<" of mode "<< Segment::modeName(s->mode()) << " to terminal of mode "
+		<< Segment::modeName(vehicleType()) << endl;
 	}
 }
 
