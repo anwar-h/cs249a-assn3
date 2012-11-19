@@ -36,7 +36,7 @@ COMPILER_FLAGS += -g -Wall
 
 # This is a list of tests. You would add the name of any new tests you add here
 # and define it below.
-FILES += EngineTest RepTest
+FILES += EngineTest RepTest A2Test
 
 # This is a list of object files.
 OBJS = $(addsuffix .o, $(FILES))
@@ -51,6 +51,9 @@ EngineTest: EngineTest.cpp $(SRC_PATH)/Engine.o
 
 RepTest: RepTest.cpp $(SRC_PATH)/Instance.o $(SRC_PATH)/Engine.o
 	$(CXX) $(PREPROCESSOR_FLAGS) $(COMPILER_FLAGS) -c RepTest.cpp
+
+A2Test: A2Test.cpp $(SRC_PATH)/Instance.o $(SRC_PATH)/Engine.o
+	$(CXX) $(PREPROCESSOR_FLAGS) $(COMPILER_FLAGS) -c A2Test.cpp
 
 # ##################
 # Main Suite

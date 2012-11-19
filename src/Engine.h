@@ -124,6 +124,20 @@ public:
 	}
 };
 
+class ShipmentCount : public Ordinal <ShipmentCount, size_t> {
+public:
+	ShipmentCount() : Ordinal<ShipmentCount, size_t>(0) {
+		if(value_ < 0) throw Fwk::RangeException("value=range()");
+	}
+	ShipmentCount(size_t n) : Ordinal<ShipmentCount, size_t>(n) {
+		if(value_ < 0) throw Fwk::RangeException("value=range()");
+	}
+
+	string stringValue() const {
+		return NumberConverter<size_t>::toString(value_);
+	}
+};
+
 class Dollars : public Ordinal<Dollars, float> {
 public:
 	Dollars() : Ordinal<Dollars, float>(0.f) {
@@ -138,12 +152,6 @@ public:
 	}
 };
 
-
-class Shipment : public Fwk::NamedInterface {
-public:
-protected:
-
-};
 
 class Location; // forward declared
 
@@ -195,6 +203,14 @@ public:
 		exp_support_ = es;
 	}
 
+	ShipmentCount capacity() const { return capacity_; }
+	void capacityIs(ShipmentCount c){
+		capacity_ = c;
+	}
+
+	ShipmentCount shipmentsReceived() const { return shipments_received_; }
+	ShipmentCount shipmentsRefused() const { return shipments_refused_; }
+
 	static Segment::Ptr SegmentNew(Fwk::String name, Mode mode) {
 		Ptr m = new Segment(name, mode);
 		m->referencesDec(1);
@@ -206,7 +222,8 @@ protected:
 	Segment(Fwk::String name, Mode mode):
 		Fwk::NamedInterface(name),
 		mode_(mode),
-		exp_support_(Segment::expediteNotSupported())
+		exp_support_(Segment::expediteNotSupported()),
+		capacity_(ShipmentCount(10))
 		{}
 
 	Mode mode_;
@@ -215,6 +232,9 @@ protected:
 	Segment::Ptr return_segment_;
 	Difficulty difficulty_;
 	ExpediteSupport exp_support_;
+	ShipmentCount capacity_;
+	ShipmentCount shipments_received_;
+	ShipmentCount shipments_refused_;
 };
 
 class Location : public Fwk::NamedInterface {
@@ -796,6 +816,34 @@ protected:
 	size_t numTerminals_[3];
 	size_t numSegments_[3];
 	size_t numExpeditedSegments_;
+};
+
+
+class Shipment {
+public:
+	typedef Fwk::Ptr<Shipment> Ptr;
+	typedef Fwk::Ptr<Shipment const> PtrConst;
+	Customer::Ptr source() { return src_; }
+	void sourceIs(Customer::Ptr s){
+		src_ = s;
+	}
+	Customer::Ptr dest() const { return dest_; }
+	void destIs(Customer::Ptr d){
+		dest_ = d;
+	}
+	PackageCount load() const { return load_; }
+	void loadIs(PackageCount l){
+		load_ = l;
+	}
+
+protected:
+	Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p): 
+		src_(s),
+		dest_(d),
+		load_(p){}
+	Customer::Ptr src_;
+	Customer::Ptr dest_;
+	PackageCount load_;
 };
 
 } /* end namespace */
