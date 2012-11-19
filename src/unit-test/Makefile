@@ -18,7 +18,7 @@ GUNIT_PATH += $(GUNIT_BASE)/include
 
 # The main source file names you will need to test.
 ENGINE_LIBS = $(SRC_PATH)/fwk/BaseCollection.o $(SRC_PATH)/fwk/BaseNotifiee.o $(SRC_PATH)/fwk/Exception.o $(SRC_PATH)/Nominal.h
-MAIN_FILES += Engine
+MAIN_FILES += Engine Instance
 
 # The objects corresponding to the tested files.
 MAIN_OBJ_PATH = $(addsuffix .o, $(addprefix $(SRC_PATH), $(MAIN_FILES)))
@@ -36,7 +36,7 @@ COMPILER_FLAGS += -g -Wall
 
 # This is a list of tests. You would add the name of any new tests you add here
 # and define it below.
-FILES += EngineTest
+FILES += EngineTest RepTest A2Test
 
 # This is a list of object files.
 OBJS = $(addsuffix .o, $(FILES))
@@ -48,6 +48,12 @@ all: main
 # ##################
 EngineTest: EngineTest.cpp $(SRC_PATH)/Engine.o
 	$(CXX) $(PREPROCESSOR_FLAGS) $(COMPILER_FLAGS) -c EngineTest.cpp
+
+RepTest: RepTest.cpp $(SRC_PATH)/Instance.o $(SRC_PATH)/Engine.o
+	$(CXX) $(PREPROCESSOR_FLAGS) $(COMPILER_FLAGS) -c RepTest.cpp
+
+A2Test: A2Test.cpp $(SRC_PATH)/Instance.o $(SRC_PATH)/Engine.o
+	$(CXX) $(PREPROCESSOR_FLAGS) $(COMPILER_FLAGS) -c A2Test.cpp
 
 # ##################
 # Main Suite

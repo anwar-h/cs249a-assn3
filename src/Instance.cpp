@@ -237,8 +237,22 @@ string SegmentRep::attribute(const string& name) {
         if (es == Segment::expediteSupported()) return "yes";
         if (es == Segment::expediteNotSupported()) return "no";
     }
+    else if (name == "Shipments Received"){
+        ShipmentCount s = segment_ -> shipmentsReceived();
+        return s.stringValue();
+    }
+    else if (name == "Shipments Refused"){
+        ShipmentCount s = segment_ -> shipmentsRefused();
+        return s.stringValue();
+    }
+    else if (name == "Capacity"){
+        ShipmentCount c = segment_ -> capacity();
+        return c.stringValue();
+    }
+    
     return "";
 }
+
 
 void SegmentRep::attributeIs(const string& name, const string& v) {
     if(name == "source") {
@@ -254,7 +268,7 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
         }
     }
     else if (name == "length"){
-       int m = atoi(v.c_str());
+       float m = atof(v.c_str());
        if (m < 0) return;
        Mile mi = Mile(m);
        segment_->lengthIs(mi);
@@ -264,10 +278,17 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
         if (seg) segment_->returnSegmentIs(seg);
     }
     else if (name == "difficulty"){
-        int d = atof(v.c_str());
+        float d = atof(v.c_str());
         if (d < 1.f || d > 5.f) return;
         Difficulty diff = Difficulty(d);
         segment_->difficultyIs(diff);
+    }
+    else if (name == "Capacity"){
+        int c = atoi(v.c_str());
+        if (c < 0) return;
+        ShipmentCount count = ShipmentCount(c);
+        segment_->capacityIs(count);
+
     }
     else if (name == "expedite support"){
         if (v == "yes" && segment_->expediteSupport() == Segment::expediteNotSupported()) {
