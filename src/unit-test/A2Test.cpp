@@ -362,16 +362,18 @@ TEST(A2Test, testConn1) {
     fleet->attributeIs("Truck, speed", "1");
     fleet->attributeIs("Truck, capacity", "20");
     fleet->attributeIs("Truck, cost", "30");
-
+    
     Ptr<Instance> conn = m->instanceNew("conn", "Conn");  
     if(!conn) conn = m->instance("conn");
-    set<string> t = tokenize(conn->attribute("connect a : d"));
+    string paths = conn->attribute("connect a : d");
+    //cout << paths << endl;
+    set<string> t = tokenize(paths);
+
     ASSERT(contains(t, "60.00 2.00 no; a(1:1.00:1r) b(3:1.00:3r) d"));
     ASSERT(contains(t, "2400.00 20.00 no; a(2:10.00:2r) c(4:10.00:4r) d"));
     // REMOVED because spec was unclear
     //ASSERT(contains(t, "3000.00 30.00 no; a(5:20.00:5r) e(6:10.00:6r) d"));
     ASSERT(contains(t, "4500.00 23.08 yes; a(5:20.00:5r) e(6:10.00:6r) d"));
-
 }
 
 TEST(A2Test, testConn2) {
