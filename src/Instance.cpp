@@ -110,49 +110,67 @@ protected:
 class CustomerRep : public LocationRep {
 public:
 
-    CustomerRep(const string& name, ManagerImpl *manager, Ptr<Location> l, Ptr<Network> n) :
+    CustomerRep(const string& name, ManagerImpl *manager, Ptr<Customer> l, Ptr<Network> n) :
         LocationRep(name, manager, n)
     {
         location_ = l;
+        c_ = l;
     }
+    
+    void attributeIs(const string& name, const string& value){
+        if (name == "Transfer Rate"){
+            int val = atoi(value.c_str());
+            ShipmentCount s = ShipmentCount(val);
+            c_->transferRateIs(s);
+        }
+        else if (name == "Shipment Size"){
+            int val = atoi(value.c_str());
+            PackageCount s = PackageCount(val);
+            c_->shipmentSizeIs(s);
+        }
+        else if (name == "Destination"){
+            Customer::Ptr loc = dynamic_cast<Customer *>(network_->location(value).ptr());
+            c_->destinationIs(loc);
+        }
+    }
+
     string attribute(const string& name) {
-cout<<__LINE__<<"INSIDE CUSTOMER ATTRIBUTE" << endl;
         if(name.substr(0, 7) == "segment"){
             int i = segmentNumber(name);
             if (i != 0) {
-                Segment::PtrConst seg = location_->segment(i - 1);
+                Segment::PtrConst seg = c_->segment(i - 1);
                 if(seg) return seg->name();
             }
             cerr << "Error with segment #" << i;
         }
         else if (name == "Transfer Rate"){
           //(in shipments per day)  
-            ShipmentCount shipperday = location_->transferRate();
+            ShipmentCount shipperday = c_->transferRate();
             return shipperday.stringValue();
         } 
         else if (name == "Shipment Size"){
           //(in packages)
-            PackageCount shipsize = location_->shipmentSize();
+            PackageCount shipsize = c_->shipmentSize();
             return shipsize.stringValue();   
         }
         else if (name == "Destination"){
             //(an absolute name of a location)
-            Location::Ptr d = location_->destination();
-            return d.stringValue();
+            Location::Ptr d = c_->destination();
+            return d->name();
         }
         else if (name == "Shipments Received"){
             //read-only; the number of shipments destined for and received by this location
-            ShipmentCount shiprec = location_->shipmentsReceived();
+            ShipmentCount shiprec = c_->shipmentsReceived();
             return shiprec.stringValue();
         }
         else if (name == "Average Latency"){
             //: read-only; the average virtual time it takes a shipment to make its way from the source to the destination, excluding refused shipments
-            Hours t = location_->avgLatency();
+            Hours t = c_->avgLatency();
             return t.stringValue();
         }
         else if (name == "Total Cost"){
             //: read-only; the total cost of all packages that have been received by this location (Groups only)
-            Dollars d = location_->totalCost();
+            Dollars d = c_->totalCost();
             return d.stringValue();
         }
 
@@ -163,6 +181,7 @@ protected:
     void onZeroReferences() {
         network_->customerDel(location_->name());
     }
+    Customer::Ptr c_;
 
 };
 
@@ -647,7 +666,7 @@ Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {
 
 
     if(type == "Customer"){
-        Ptr<Location> l = network_->customerNew(name);
+        Ptr<Customer> l = network_->customerNew(name);
         Ptr<CustomerRep> c = new CustomerRep(name, this, l, network_);
         instance_[name] = c;
         return c;

@@ -93,11 +93,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     cout << "Customer1 Segment 1:" << endl;
-    cout << customer1->attribute("segment1");
+    cout << customer1->attribute("segment1")<<endl;
 
     cout << "Port1 Segment 1:" << endl;
-    cout << port1->attribute("segment1");
-    
+    cout << port1->attribute("segment1")<<endl;
+
 
     cout << "**** explore customer1 : distance 1500 ****" << endl;
     cout << conn->attribute("explore customer1 : distance 1500 cost 20 expedited time 13") << endl;

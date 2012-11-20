@@ -192,7 +192,7 @@ public:
 	}
 
 	Segment::Ptr returnSegment() const { return return_segment_; }
-	void returnSegmentIs(Ptr &r);
+	void returnSegmentIs(Segment::Ptr &r);
 
 	Difficulty difficulty() const { return difficulty_; }
 	void difficultyIs(Difficulty d) {
@@ -309,7 +309,7 @@ public:
 	typedef Fwk::Ptr<Customer> Ptr;
 	typedef Fwk::Ptr<Customer const> PtrConst;
 
-	static Location::Ptr CustomerNew(Fwk::String name) {
+	static Customer::Ptr CustomerNew(Fwk::String name) {
 		Ptr m = new Customer(name);
 		m->referencesDec(1);
 		// decr. refer count to compensate for initial val of 1
@@ -319,12 +319,24 @@ public:
 	ShipmentCount transferRate() const{
 		return transfer_rate_;
 	}
+	void transferRateIs(ShipmentCount tr){
+		transfer_rate_ = tr;
+	}
+
 	PackageCount shipmentSize() const {
 		return shipment_size_;
 	}
+	void shipmentSizeIs(PackageCount pc){
+		shipment_size_ = pc;
+	}
+
 	Customer::Ptr destination() const{
 		return destination_;
 	}
+	void destinationIs(Customer::Ptr c){
+		destination_ = c;
+	}
+	
 	ShipmentCount shipmentsReceived() const{
 		return shipments_received_;
 	}
@@ -641,8 +653,8 @@ public:
 	Segment::Ptr segmentNew(Fwk::String name, Segment::Mode mode);
 	Segment::Ptr segmentDel(Fwk::String name);
 
-	Location::Ptr customerNew(Fwk::String name);
-	Location::Ptr customerDel(Fwk::String name);
+	Customer::Ptr customerNew(Fwk::String name);
+	Customer::Ptr customerDel(Fwk::String name);
 
 	Location::Ptr portNew(Fwk::String name);
 	Location::Ptr portDel(Fwk::String name);

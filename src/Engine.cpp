@@ -472,12 +472,14 @@ Network::locationSegmentsDel(Location::Ptr location)
 	}
 }
 
-Location::Ptr
+Customer::Ptr
 Network::customerNew(Fwk::String name)
 {
 	// check to see if it already exists
-	Location::Ptr customer = location(name);
-	if(customer) {
+	Location::Ptr cust = location(name);
+	Customer::Ptr customer;
+
+	if(cust) {
 		cerr << "Network::customerNew() Customer name " << name << " already in use!" << endl;
 		return Customer::Ptr();
 	}
@@ -489,15 +491,15 @@ Network::customerNew(Fwk::String name)
 	// tell all the notifiees
 	if(notifiees()) {
 		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
-			Customer::Ptr cust = dynamic_cast<Customer *>(customer.ptr());
-			try { n->onCustomerNew(cust); }
+			//Customer::Ptr cust = dynamic_cast<Customer *>(customer.ptr());
+			try { n->onCustomerNew(customer); }
 			catch(...) { cerr << "Network::customerNew() notification for " << name << " unsuccessful" << endl; }
 		}
 	}
 	return customer;
 }
 
-Location::Ptr
+Customer::Ptr
 Network::customerDel(Fwk::String name)
 {
 	// try to retrieve
@@ -508,14 +510,14 @@ Network::customerDel(Fwk::String name)
 	locationSegmentsDel(customer);
 	
 	// tell all the notifiees
+	Customer::Ptr cust = dynamic_cast<Customer *>(customer.ptr());
 	if(notifiees()) {
 		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
-			Customer::Ptr cust = dynamic_cast<Customer *>(customer.ptr());
 			try { n->onCustomerDel(cust); }
 			catch(...) { cerr << "Network::customerDel() notification for " << name << " unsuccessful" << endl; }
 		}
 	}
-	return customer;
+	return cust;
 }
 
 Location::Ptr
