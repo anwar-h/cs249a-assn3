@@ -513,11 +513,11 @@ public:
 	static inline SearchPattern connect() { return connect_; }
 
 	enum Constraint {
-		constrainNone_ = 0x0,
+		constrainNone_ = 0,
 		constrainDistance_ = 0x1,
-		constrainCost_ = 0x10,
-		constrainHours_ = 0x100,
-		constrainExpedited_ = 0x1000
+		constrainCost_ = 0x2,
+		constrainHours_ = 0x4,
+		constrainExpedited_ = 0x8
 	};
 	static inline Constraint none() { return constrainNone_; }
 	static inline Constraint distance() { return constrainDistance_; }
@@ -584,6 +584,7 @@ protected:
 		{}
 
 	bool isValidExplorePath(Path *path) const;
+	bool isValidExplorePathNotExpedited(Path *one, Path* two) const;
 	vector<string> stringifyPaths(SearchPattern pattern, vector<Path*> &completedPaths) const;
 
 	Segment::ExpediteSupport expedited_;

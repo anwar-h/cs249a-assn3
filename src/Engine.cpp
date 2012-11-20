@@ -194,20 +194,30 @@ void
 Connectivity::constraintsActiveIs(int mask)
 {
 	if (mask == Connectivity::none()) {
-		mask_ = Connectivity::none();
+		mask_ = 0;
+		//cout << "CLEAR CONSTRAINTS";
+		//printf("%#x\n", mask_);
 	}
 	else {
 		if (mask & Connectivity::distance()) {
-			mask_ = mask_ || Connectivity::distance();
+			mask_ = mask_ | Connectivity::distance();
+			//cout << "CONSTRAIN DISTANCE";
+			//printf("%#x\n", mask_);
 		}
 		if (mask & Connectivity::cost()) {
-			mask_ = mask_ || Connectivity::cost();
+			mask_ = mask_ | Connectivity::cost();
+			//cout << "CONSTRAIN COST";
+			//printf("%#x\n", mask_);
 		}
 		if (mask & Connectivity::hours()) {
-			mask_ = mask_ || Connectivity::hours();
+			mask_ = mask_ | Connectivity::hours();
+			//cout << "CONSTRAIN TIME";
+			//printf("%#x\n", mask_);
 		}
 		if (mask & Connectivity::expedited()) {
-			mask_ = mask_ || Connectivity::expedited();
+			mask_ = mask_ | Connectivity::expedited();
+			//cout << "CONSTRAIN EXPEDITED";
+			//printf("%#x\n", mask_);
 		}
 	}
 }
@@ -241,26 +251,41 @@ Connectivity::isValidExplorePath(Path *path) const
 	bool validPath = true;
 	if (constraints & Connectivity::distance()) {
 		if (path->distance() > constraintDistance()) {
+			//cout << "NOT VALID PATH => DISTANCE" << endl;
 			validPath = false;
 		}
 	}
 	if (constraints & Connectivity::cost()) {
 		if (path->cost() > constraintCost()) {
+			//cout << "NOT VALID PATH => COST " << path->cost().value() << endl;
 			validPath = false;
 		}
 	}
 	if (constraints & Connectivity::hours()) {
 		if (path->hours() > constraintHours()) {
+			//cout << "NOT VALID PATH => TIME" << endl;
 			validPath = false;
 		}
 	}
 	if (constraints & Connectivity::expedited()) {
 		if (constraintExpedited() == Segment::expediteSupported()
 			&& path->expedited() != Segment::expediteSupported()) {
+			//cout << "NOT VALID PATH => EXPEDITED" << endl;
 			validPath = false;
 		}
 	}
 	return validPath;
+}
+
+bool
+Connectivity::isValidExplorePathNotExpedited(Path *one, Path* two) const
+{
+	one->expeditedIs(Segment::expediteNotSupported());
+	if (isValidExplorePath(one)) {
+		*two = *one;
+		return true;
+	}
+	return false;
 }
 
 
@@ -297,7 +322,7 @@ Connectivity::paths(SearchPattern pattern) const
 				if (curr->locationMembershipStatus(nextLocation) == Path::notMember()) {
 					Path* copy = copyPath(curr, fleet(), nextLocation, nextSegment);
 					Path* copy2 = copyPath(curr, fleet(), nextLocation, nextSegment);
-					if (isValidExplorePath(copy)) {
+					if (isValidExplorePath(copy) || isValidExplorePathNotExpedited(copy, copy2)) {
 						if (copy->expedited() == Segment::expediteSupported()) {
 							expeditedPaths.push_back(copy);
 						}

@@ -699,12 +699,15 @@ TEST(A2Test, testExplore3) {
     // All links have length 1 and difficulty 1
     Ptr<Instance> conn = m->instanceNew("conn", "Conn");
     if(!conn) conn = m->instance("conn");
+
     set<string> t = tokenize(conn->attribute("explore a : distance 1"));
     ASSERT(contains(t, "a(1:1.00:1r) b"));
     ASSERT(contains(t, "a(2:1.00:2r) c"));
     ASSERT(t.size() == 2);
 
-    t = tokenize(conn->attribute("explore a : cost 20"));
+
+string paths = conn->attribute("explore a : cost 20");
+    t = tokenize(paths);
     ASSERT(contains(t, "a(1:1.00:1r) b"));
     ASSERT(contains(t, "a(1:1.00:1r) b(3:1.00:3r) d"));
     ASSERT(contains(t, "a(1:1.00:1r) b(4:1.00:4r) e"));
@@ -712,7 +715,6 @@ TEST(A2Test, testExplore3) {
     ASSERT(contains(t, "a(2:1.00:2r) c(5:1.00:5r) f"));
     ASSERT(contains(t, "a(2:1.00:2r) c(6:1.00:6r) g"));
     ASSERT(t.size() == 6);
-
     t = tokenize(conn->attribute("explore d : expedited"));
     ASSERT(contains(t, "d(3r:1.00:3) b(1r:1.00:1) a(2:1.00:2r) c(6:1.00:6r) g"));
 }

@@ -494,6 +494,7 @@ string ConnRep::attribute(const string& name) {
          if (start== "" ) return "";
         Location::Ptr strt = network_->location(start);
         if (!strt) return "";
+        connectivity_->constraintsActiveDel();
         parseConstraints(c);
         connectivity_->constraintStartIs(strt);
         vector<string> paths = connectivity_->paths(Connectivity::explore());
