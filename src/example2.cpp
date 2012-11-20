@@ -92,6 +92,13 @@ int main(int argc, char *argv[]) {
         cerr << "Unexpected NULL conn." << endl;
         return 1;
     }
+    cout << "Customer1 Segment 1:" << endl;
+    cout << customer1->attribute("segment1");
+
+    cout << "Port1 Segment 1:" << endl;
+    cout << port1->attribute("segment1");
+    
+
     cout << "**** explore customer1 : distance 1500 ****" << endl;
     cout << conn->attribute("explore customer1 : distance 1500 cost 20 expedited time 13") << endl;
     cout << endl;

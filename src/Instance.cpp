@@ -45,7 +45,7 @@ public:
         Instance(name), network_(n), manager_(manager){}
 
     // Instance method
-    string attribute(const string& name);
+    virtual string attribute(const string& name);
 
     // Instance method
     void attributeIs(const string& name, const string& v);
@@ -53,21 +53,23 @@ public:
 protected:
     Ptr<Location> location_;
     Ptr<Network> network_;
+    int segmentNumber(const string& name);
 
 private:
     Ptr<ManagerImpl> manager_;
-    int segmentNumber(const string& name);
     
 };
 
 
-string LocationRep::attribute(const string& name) {
-    int i = segmentNumber(name);
-    if (i != 0) {
-        Segment::PtrConst seg = location_->segment(i - 1);
-        if(seg) return seg->name();
+string LocationRep::attribute(const string& name) {    
+    if(name.substr(0, 7) == "segment"){
+        int i = segmentNumber(name);
+        if (i != 0) {
+            Segment::PtrConst seg = location_->segment(i - 1);
+            if(seg) return seg->name();
+        }
+        cerr << "Error with segment #" << i;
     }
-    cerr << "Error with segment #" << i;
     return "";
 }
 
@@ -88,10 +90,10 @@ int LocationRep::segmentNumber(const string& name) {
 }
 
                                                                                                   
-class TruckTerminalRep : public LocationRep {
+class TerminalRep : public LocationRep {
 public:
 
-    TruckTerminalRep(const string& name, ManagerImpl *manager, Ptr<Location> l, Ptr<Network> n) :
+    TerminalRep(const string& name, ManagerImpl *manager, Ptr<Location> l, Ptr<Network> n) :
         LocationRep(name, manager, n)
     {
         location_ = l;
@@ -104,35 +106,6 @@ protected:
 
 };
 
-class BoatTerminalRep : public LocationRep {
-public:
-
-    BoatTerminalRep(const string& name, ManagerImpl *manager, Ptr<Location> l, Ptr<Network> n) :
-        LocationRep(name, manager, n)
-    {
-        location_ = l;
-    }
-protected:
-    void onZeroReferences() {
-        network_->terminalDel(location_->name());
-    }
-
-};
-
-class PlaneTerminalRep : public LocationRep {
-public:
-
-    PlaneTerminalRep(const string& name, ManagerImpl *manager, Ptr<Location> l, Ptr<Network> n) :
-        LocationRep(name, manager, n)
-    {
-        location_ = l;
-    }
-protected:
-    void onZeroReferences() {
-        network_->terminalDel(location_->name());
-    }
-
-};
 
 class CustomerRep : public LocationRep {
 public:
@@ -142,6 +115,50 @@ public:
     {
         location_ = l;
     }
+    string attribute(const string& name) {
+cout<<__LINE__<<"INSIDE CUSTOMER ATTRIBUTE" << endl;
+        if(name.substr(0, 7) == "segment"){
+            int i = segmentNumber(name);
+            if (i != 0) {
+                Segment::PtrConst seg = location_->segment(i - 1);
+                if(seg) return seg->name();
+            }
+            cerr << "Error with segment #" << i;
+        }
+        else if (name == "Transfer Rate"){
+          //(in shipments per day)  
+            ShipmentCount shipperday = location_->transferRate();
+            return shipperday.stringValue();
+        } 
+        else if (name == "Shipment Size"){
+          //(in packages)
+            PackageCount shipsize = location_->shipmentSize();
+            return shipsize.stringValue();   
+        }
+        else if (name == "Destination"){
+            //(an absolute name of a location)
+            Location::Ptr d = location_->destination();
+            return d.stringValue();
+        }
+        else if (name == "Shipments Received"){
+            //read-only; the number of shipments destined for and received by this location
+            ShipmentCount shiprec = location_->shipmentsReceived();
+            return shiprec.stringValue();
+        }
+        else if (name == "Average Latency"){
+            //: read-only; the average virtual time it takes a shipment to make its way from the source to the destination, excluding refused shipments
+            Hours t = location_->avgLatency();
+            return t.stringValue();
+        }
+        else if (name == "Total Cost"){
+            //: read-only; the total cost of all packages that have been received by this location (Groups only)
+            Dollars d = location_->totalCost();
+            return d.stringValue();
+        }
+
+        return "";
+    }
+
 protected:
     void onZeroReferences() {
         network_->customerDel(location_->name());
@@ -645,21 +662,21 @@ Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {
 
     else if (type == "Truck terminal") {
         Ptr<Location> l = network_->terminalNew(name, Segment::truck());
-        Ptr<TruckTerminalRep> t = new TruckTerminalRep(name, this, l, network_);
+        Ptr<TerminalRep> t = new TerminalRep(name, this, l, network_);
         instance_[name] = t;
         return t;
     }
 
     else if (type == "Boat terminal"){
         Ptr<Location> l = network_->terminalNew(name, Segment::boat());
-        Ptr<BoatTerminalRep> t = new BoatTerminalRep(name, this, l, network_);
+        Ptr<TerminalRep> t = new TerminalRep(name, this, l, network_);
         instance_[name] = t;
         return t;
     }
 
     else if (type == "Plane terminal"){
         Ptr<Location> l = network_->terminalNew(name, Segment::plane());
-        Ptr<PlaneTerminalRep> t = new PlaneTerminalRep(name, this, l, network_);
+        Ptr<TerminalRep> t = new TerminalRep(name, this, l, network_);
         instance_[name] = t;
         return t;
     }

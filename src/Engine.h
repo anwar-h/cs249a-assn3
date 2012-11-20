@@ -316,10 +316,36 @@ public:
 		return m;
 	}
 
+	ShipmentCount transferRate() const{
+		return transfer_rate_;
+	}
+	PackageCount shipmentSize() const {
+		return shipment_size_;
+	}
+	Customer::Ptr destination() const{
+		return destination_;
+	}
+	ShipmentCount shipmentsReceived() const{
+		return shipments_received_;
+	}
+	Hours avgLatency() const{
+		return avg_latency_;
+	}
+	Dollars totalCost() const {
+		return total_cost_;
+	}
+
 protected:
 	Customer(Fwk::String name):
 		Location(name, Location::customer())
 		{}
+	ShipmentCount transfer_rate_;
+	PackageCount shipment_size_;
+	Customer::Ptr destination_;
+	ShipmentCount shipments_received_;
+	Hours avg_latency_;
+	Dollars total_cost_;
+
 };
 
 class Port : public Location {
