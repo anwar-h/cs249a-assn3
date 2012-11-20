@@ -275,7 +275,7 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
     }
     else if (name == "return segment"){
         Segment::Ptr seg = network_ -> segment(v);
-        if (seg) segment_->returnSegmentIs(seg);
+        segment_->returnSegmentIs(seg);
     }
     else if (name == "difficulty"){
         float d = atof(v.c_str());
