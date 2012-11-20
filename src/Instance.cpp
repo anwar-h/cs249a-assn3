@@ -591,7 +591,7 @@ void FleetRep::attributeIs(const string& name, const string& v) {
         Dollars d = Dollars(f);
         fleet_ -> costPerMileIs(m, d);
     }else if (property== "capacity"){
-        size_t c = atoi(v.c_str());
+        int c = atoi(v.c_str());
         if (c < 0) return;
         PackageCount p = PackageCount(c);
         fleet_ -> capacityIs(m, p);

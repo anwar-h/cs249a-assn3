@@ -916,7 +916,7 @@ TEST(A2Test, testErrorInvalidValues) {
     EXPECT_EQ(seg->attribute("length"), "1.00");
     EXPECT_EQ(seg->attribute("difficulty"), "1.00");     
     EXPECT_EQ(seg->attribute("expedite support"), "yes");
-    //EXPECT_EQ(fleet->attribute("Boat, capacity"), "10");
+    EXPECT_EQ(fleet->attribute("Boat, capacity"), "10");
     ASSERT(fleet->attribute("Boat, capacity") == "10" || 
         fleet->attribute("Boat, capacity") == "10.00");
     EXPECT_EQ(fleet->attribute("Boat, cost"), "10.00");
