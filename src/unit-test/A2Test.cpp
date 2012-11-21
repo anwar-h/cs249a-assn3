@@ -948,15 +948,13 @@ TEST(A2Test, testErrorExistingInstance) {
 
 TEST(A2Test, testStressTest) {
   Ptr<Instance::Manager> m = shippingInstanceManager();
-cout << "FIX ERROR WITH DELETING FLEETS!!!" << endl;
-EXPECT_EQ(0,1);
   for (int i = 0; i < 100000; i++) {
 
     m->instanceNew("conn", "Conn");
     m->instanceDel("conn");
 
     m->instanceNew("fleet", "Fleet");
-//    m->instanceDel("fleet");
+    m->instanceDel("fleet");
 
   
     m->instanceNew("seg", "Truck segment");

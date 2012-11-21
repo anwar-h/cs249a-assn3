@@ -750,8 +750,10 @@ Ptr<Instance> ManagerImpl::instance(const string& name) {
 
 void ManagerImpl::instanceDel(const string& name) {
     Ptr<Instance> entityToDel = instance(name);
-    instance_.erase(name);
-    entityToDel->referencesDec(entityToDel->references());
+    if (entityToDel != fleet_ && entityToDel != stats_ && entityToDel != conn_) {
+        instance_.erase(name);
+        entityToDel->referencesDec(entityToDel->references());
+    }
 }
 
 
