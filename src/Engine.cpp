@@ -54,6 +54,57 @@ Segment::returnSegmentIs(Ptr &r) {
 }
 
 void
+Location::arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment)
+{
+	// add this shipment to our queue
+	//TODO
+	//queue_.enq(shipment);
+	
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			try { n->onShipmentArrival(shipment); }
+			catch(...) {
+				cerr << "Location::onShipmentArrival() notification for "
+				<< shipment->name() << " unsuccessful" << endl;
+			}
+		}
+	}
+}
+
+
+void
+Location::NotifieeConst::notifierIs(const Location::PtrConst& _notifier) {
+   Location::Ptr notifierSave(const_cast<Location *>(notifier_.ptr()));
+   if(_notifier==notifier_) return;
+   notifier_ = _notifier;
+   if(notifierSave) {
+      notifierSave->deleteNotifiee(this);
+   }
+   if(_notifier) {
+      _notifier->newNotifiee(this);
+   }
+   if(isNonReferencing_) {
+      if(notifierSave) notifierSave->newRef();
+      if(notifier_) notifier_->deleteRef();
+   }
+}
+
+Location::NotifieeConst::~NotifieeConst() {
+   if(notifier_) {
+      notifier_->deleteNotifiee(this);
+   }
+   if(notifier_&&isNonReferencing()) notifier_->newRef();
+}
+
+void
+LocationReactor::onShipmentArrival(const Fwk::Ptr<Shipment> &shipment)
+{
+	//TODO
+}
+
+
+void
 Terminal::segmentIs(const Segment::PtrConst &s)
 {
 	if (s->mode() == vehicleType()) {
