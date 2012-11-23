@@ -1,8 +1,8 @@
 
 import argparse, inspect, sys, os, subprocess
 
-anwar_default_path = "~/cs249a/assn2/"
-michelle_default_path = "~/cs249a/hw2/"
+anwar_default_path = "~/cs249a/assn3/"
+michelle_default_path = "~/cs249a/hw3/"
 
 def main():
 	(anwar, michelle) = getCommandLineArgs()
