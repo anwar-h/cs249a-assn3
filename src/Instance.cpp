@@ -68,14 +68,15 @@ string LocationRep::attribute(const string& name) {
             Segment::PtrConst seg = location_->segment(i - 1);
             if(seg) return seg->name();
         }
-        cerr << "Error with segment #" << i;
     }
+    cerr<<"bad input"<<endl;
     return "";
 }
 
 
 void LocationRep::attributeIs(const string& name, const string& v) {
-    //nothing to do
+    cerr <<"tried to set location attribute '" << name << "' to '" << v <<"'"<< endl;
+    throw Fwk::AttributeNotSupportedException(name);
 }
 
 static const string segmentStr = "segment";
@@ -132,6 +133,10 @@ public:
             Customer::Ptr loc = dynamic_cast<Customer *>(network_->location(value).ptr());
             c_->destinationIs(loc);
         }
+        else {
+            cerr <<"tried to set customer attribute '" << name << "' to '" << value << "'"<< endl;
+            throw Fwk::AttributeNotSupportedException(name);
+        }
     }
 
     string attribute(const string& name) {
@@ -174,7 +179,9 @@ public:
             return d.stringValue();
         }
 
+        cerr<<"bad input"<<endl;
         return "";
+        
     }
 
 protected:
@@ -286,6 +293,7 @@ string SegmentRep::attribute(const string& name) {
         return c.stringValue();
     }
     
+    cerr<<"bad input"<<endl;
     return "";
 }
 
@@ -334,6 +342,10 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
             network_->expediteSupportIs(segment_->name(), Segment::expediteNotSupported());
         }    
     }
+    else {
+        cerr <<"tried to set segment attribute '" << name << "' to '" << v << "'" << endl;
+        throw Fwk::AttributeNotSupportedException(name);
+    }
 
 }
 
@@ -350,7 +362,8 @@ public:
     }
     string attribute(const string& name);
     void attributeIs(const string& name, const string& v) {
-        return;
+        cerr <<"tried to set stats attributes."<< endl;
+//        throw Fwk::PermissionException(name);
     }
     ~StatsRep(){
         //do nothing
@@ -394,7 +407,10 @@ string StatsRep::attribute(const string& name){
         float w = statistics_ -> percentExpeditedSegments();
         return NumberConverter<float>::toString(w);
     }
-    return "";
+    else {
+        cerr<<"bad input"<<endl;
+        return "";
+    }
 }
 
 
@@ -417,7 +433,8 @@ public:
 
     // Instance method
     void attributeIs(const string& name, const string& v) {
-        
+        cerr <<"tried to set conn attributes."<< endl;
+//        throw Fwk::PermissionException(name);
     }
 
 private:
@@ -472,7 +489,10 @@ void ConnRep::parseConstraints(string &c){
         connectivity_->constraintsActiveIs(Connectivity::hours());
         connectivity_->constraintHoursIs(Hours(v));
     }
-    else return;
+    else {
+        cerr<<"bad input"<<endl;
+        return;
+    }
     if(c.length() - i != 0){
         string nextstring = c.substr(i + 1, c.length() - i);
         parseConstraints(nextstring);
@@ -510,10 +530,16 @@ string ConnRep::attribute(const string& name) {
         string stop = "";
         getStartStop(name, start, stop);
         connectivity_->constraintsActiveDel();
-        if (start== "" || stop=="") return "";
+        if (start== "" || stop==""){
+            cerr<<"bad input"<<endl;
+            return "";
+        }
         Location::Ptr strt = network_->location(start);
         Location::Ptr stp = network_->location(stop);
-        if (!(strt) || !(stp)) return "";
+        if (!(strt) || !(stp)){
+            cerr<<"bad input"<<endl;
+            return "";
+        }
         connectivity_->constraintStartIs(strt);
         connectivity_->constraintEndIs(stp);
         vector<string> paths = connectivity_->paths(Connectivity::connect());
@@ -527,9 +553,15 @@ string ConnRep::attribute(const string& name) {
         string start = "";
         string c = "";
         getStartStop(name, start, c);
-         if (start== "" ) return "";
+        if (start== "" ){
+            cerr<<"bad input"<<endl;
+            return "";
+        }
         Location::Ptr strt = network_->location(start);
-        if (!strt) return "";
+        if (!strt){
+            cerr<<"bad input"<<endl;
+            return "";
+        }
         connectivity_->constraintsActiveDel();
         parseConstraints(c);
         connectivity_->constraintStartIs(strt);
@@ -540,7 +572,10 @@ string ConnRep::attribute(const string& name) {
         }
         return returnval;
     }
-    return "";
+    else {
+        cerr<<"bad input"<<endl;
+        return "";
+    }
 }
 
 
@@ -613,8 +648,8 @@ void FleetRep::attributeIs(const string& name, const string& v) {
     } else if (mode == "Plane"){
         m = Segment::plane();
     } else {
-        cerr<<"bad input"<<endl;
-        return;
+        cerr <<"tried to set fleet attribute '" << mode << "' to '" << property << "'"<<endl;
+        throw Fwk::AttributeNotSupportedException(name);
     }
 
     if (property=="speed"){
@@ -633,7 +668,8 @@ void FleetRep::attributeIs(const string& name, const string& v) {
         PackageCount p = PackageCount(c);
         fleet_ -> capacityIs(m, p);
     }else{
-        cerr<<"bad input"<<endl;
+        cerr <<"tried to set fleet attribute '" << mode << "' to '" << property <<"'"<< endl;
+        throw Fwk::AttributeNotSupportedException(name);
     }
 }
 
@@ -736,7 +772,9 @@ Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {
         instance_[name] = fleet_;
         return fleet_;
     }
-    return NULL;
+
+    cerr <<"tried to create '" << type << "' instance"<< endl;
+    throw Fwk::AttributeNotSupportedException(name);
 }
 
 
