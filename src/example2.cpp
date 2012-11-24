@@ -115,7 +115,12 @@ int main(int argc, char *argv[]) {
     cout << " --- Ports and customers --- " << endl;
     cout << "# Ports          : " << stats->attribute("Port") << endl;
 
+
+    customer1->attributeIs("ShipmentSize", "2");
+
     cerr << "Done!" << endl;
+
+
 
     return 0;
 }
