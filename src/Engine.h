@@ -12,6 +12,8 @@
 #include "fwk/String.h"
 #include "Instance.h"
 #include "Nominal.h"
+#include "ActivityImpl.h"
+#include "ActivityReactor.h"
 #include <string>
 #include <sstream>
 #include <vector>
@@ -124,7 +126,7 @@ public:
 	}
 };
 
-class ShipmentCount : public Ordinal <ShipmentCount, size_t> {
+class ShipmentCount : public Ordinal<ShipmentCount, size_t> {
 public:
 	ShipmentCount() : Ordinal<ShipmentCount, size_t>(0) {
 		if(value_ < 0) throw Fwk::RangeException("value=range()");
@@ -152,9 +154,8 @@ public:
 	}
 };
 
-
+class Shipment; // forward declared
 class Location; // forward declared
-
 class Segment : public Fwk::NamedInterface {
 public:
 	typedef Fwk::Ptr<Segment> Ptr;
@@ -271,6 +272,9 @@ public:
 			}
 		}
 	}
+
+	void arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment);
+
 	typedef vector<Segment::PtrConst>::iterator SegmentIterator;
 	typedef vector<Segment::PtrConst>::const_iterator SegmentIteratorConst;
 	SegmentIterator segmentsIteratorBegin() {
@@ -293,14 +297,102 @@ public:
 		return m;
 	}
 
+	class NotifieeConst : public virtual Fwk::NamedInterface::NotifieeConst {
+	public:
+	  	typedef Fwk::Ptr<NotifieeConst const> PtrConst;
+	  	typedef Fwk::Ptr<NotifieeConst> Ptr;
+
+	  	Fwk::String name() const { return notifier_->name(); }
+	  	Location::PtrConst notifier() const { return notifier_; }
+	  	bool isNonReferencing() const { return isNonReferencing_; }
+	   	~NotifieeConst();
+
+	  	virtual void notifierIs(const Location::PtrConst& _notifier);
+		virtual void onShipmentArrival(const Fwk::Ptr<Shipment> &shipment) {}
+
+		void lrNextIs(NotifieeConst * _lrNext) {
+			lrNext_ = _lrNext;
+		}
+		NotifieeConst const * lrNext() const { return lrNext_; }
+		NotifieeConst * lrNext() { return lrNext_; }
+
+
+	  	static NotifieeConst::Ptr NotifieeConstIs() {
+		 	Ptr m = new NotifieeConst();
+		 	m->referencesDec(1);
+		 	// decr. refer count to compensate for initial val of 1
+		 	return m;
+	  	}
+	protected:
+	  	NotifieeConst(): Fwk::NamedInterface::NotifieeConst(),
+	  		isNonReferencing_(false),
+	  		lrNext_(0)
+	  		{}
+
+	  	bool isNonReferencing_;
+	  	NotifieeConst * lrNext_;
+	  	Location::PtrConst notifier_;
+	};
+	class Notifiee : public virtual Location::NotifieeConst, public virtual Fwk::NamedInterface::Notifiee {
+	public:
+		typedef Fwk::Ptr<Notifiee const> PtrConst;
+	  	typedef Fwk::Ptr<Notifiee> Ptr;
+
+	  	Location::PtrConst notifier() const { return NotifieeConst::notifier(); }
+	  	Location::Ptr notifier() { return const_cast<Location *>(NotifieeConst::notifier().ptr()); }
+
+	  	static Notifiee::Ptr NotifieeIs() {
+			Ptr m = new Notifiee();
+		 	m->referencesDec(1);
+		 	// decr. refer count to compensate for initial val of 1
+		 	return m;
+	  	}
+	protected:
+	  	Notifiee(): Fwk::NamedInterface::Notifiee() {}
+	};
+
+	typedef Fwk::ListRaw<NotifieeConst> NotifieeList;
+	typedef NotifieeList::Iterator NotifieeIterator;
+   	NotifieeIterator notifieeIter() { return notifiee_.iterator(); }
+	U32 notifiees() const { return notifiee_.members(); }
+
 protected:
 	Location(Fwk::String name, LocationType location_type):
 		Fwk::NamedInterface(name),
 		location_type_(location_type)
 		{}
 
+	void newNotifiee(Location::NotifieeConst *n) const {
+		Location* me = const_cast<Location*>(this);
+		me->notifiee_.newMember(n);
+	}
+	void deleteNotifiee(Location::NotifieeConst *n) const {
+		Location* me = const_cast<Location*>(this);
+		me->notifiee_.deleteMember(n);
+	}
+	
+	NotifieeList notifiee_;
 	vector<Segment::PtrConst> segments_;
 	LocationType location_type_;
+};
+
+class LocationReactor : public Location::Notifiee {
+public:
+	typedef Fwk::Ptr<LocationReactor> Ptr;
+	typedef Fwk::Ptr<LocationReactor const> PtrConst;
+
+	void onShipmentArrival(const Fwk::Ptr<Shipment> &shipment);
+
+	static LocationReactor::Ptr LocationReactorNew(Fwk::String name) {
+		Ptr m = new LocationReactor(name);
+		m->referencesDec(1);
+		return m;
+	}
+
+protected:
+	LocationReactor(Fwk::String name):
+		Location::Notifiee()
+		{}
 };
 
 
@@ -309,33 +401,20 @@ public:
 	typedef Fwk::Ptr<Customer> Ptr;
 	typedef Fwk::Ptr<Customer const> PtrConst;
 
-	static Customer::Ptr CustomerNew(Fwk::String name) {
-		Ptr m = new Customer(name);
-		m->referencesDec(1);
-		// decr. refer count to compensate for initial val of 1
-		return m;
-	}
-
 	ShipmentCount transferRate() const{
 		return transfer_rate_;
 	}
-	void transferRateIs(ShipmentCount tr){
-		transfer_rate_ = tr;
-	}
+	void transferRateIs(ShipmentCount tr);
 
 	PackageCount shipmentSize() const {
 		return shipment_size_;
 	}
-	void shipmentSizeIs(PackageCount pc){
-		shipment_size_ = pc;
-	}
+	void shipmentSizeIs(PackageCount pc);
 
 	Customer::Ptr destination() const{
 		return destination_;
 	}
-	void destinationIs(Customer::Ptr c){
-		destination_ = c;
-	}
+	void destinationIs(Customer::Ptr c);
 	
 	ShipmentCount shipmentsReceived() const{
 		return shipments_received_;
@@ -347,18 +426,165 @@ public:
 		return total_cost_;
 	}
 
+	static Customer::Ptr CustomerNew(Fwk::String name) {
+		Ptr m = new Customer(name);
+		m->referencesDec(1);
+		// decr. refer count to compensate for initial val of 1
+		return m;
+	}
+
+	class NotifieeConst : public virtual Fwk::NamedInterface::NotifieeConst {
+	public:
+	  	typedef Fwk::Ptr<NotifieeConst const> PtrConst;
+	  	typedef Fwk::Ptr<NotifieeConst> Ptr;
+
+	  	Fwk::String name() const { return notifier_->name(); }
+	  	Customer::PtrConst notifier() const { return notifier_; }
+	  	bool isNonReferencing() const { return isNonReferencing_; }
+	   	~NotifieeConst();
+
+	  	virtual void notifierIs(const Customer::PtrConst& _notifier);
+		virtual void onTransferRate(ShipmentCount transferRate) {}
+		virtual void onShipmentSize(PackageCount shipmentSize) {}
+		virtual void onDestination(Customer::Ptr destination) {}
+
+		void lrNextIs(NotifieeConst * _lrNext) {
+			lrNext_ = _lrNext;
+		}
+		NotifieeConst const * lrNext() const { return lrNext_; }
+		NotifieeConst * lrNext() { return lrNext_; }
+
+
+	  	static NotifieeConst::Ptr NotifieeConstIs() {
+		 	Ptr m = new NotifieeConst();
+		 	m->referencesDec(1);
+		 	// decr. refer count to compensate for initial val of 1
+		 	return m;
+	  	}
+	protected:
+	  	NotifieeConst(): Fwk::NamedInterface::NotifieeConst(),
+	  		isNonReferencing_(false),
+	  		lrNext_(0)
+	  		{}
+
+	  	bool isNonReferencing_;
+	  	NotifieeConst * lrNext_;
+	  	Customer::PtrConst notifier_;
+	};
+	class Notifiee : public virtual Customer::NotifieeConst, public virtual Fwk::NamedInterface::Notifiee {
+	public:
+		typedef Fwk::Ptr<Notifiee const> PtrConst;
+	  	typedef Fwk::Ptr<Notifiee> Ptr;
+
+	  	Customer::PtrConst notifier() const { return NotifieeConst::notifier(); }
+	  	Customer::Ptr notifier() { return const_cast<Customer *>(NotifieeConst::notifier().ptr()); }
+
+	  	static Notifiee::Ptr NotifieeIs() {
+			Ptr m = new Notifiee();
+		 	m->referencesDec(1);
+		 	// decr. refer count to compensate for initial val of 1
+		 	return m;
+	  	}
+	protected:
+	  	Notifiee(): Fwk::NamedInterface::Notifiee() {}
+	};
+
+	class CustomerReactor : public Customer::Notifiee {
+	public:
+		typedef Fwk::Ptr<CustomerReactor> Ptr;
+		typedef Fwk::Ptr<CustomerReactor const> PtrConst;
+
+		void onTransferRate(ShipmentCount transferRate);
+		void onShipmentSize(PackageCount shipmentSize);
+		void onDestination(Customer::Ptr destination);
+
+		static CustomerReactor::Ptr CustomerReactorNew(Fwk::String name) {
+			Ptr m = new CustomerReactor(name);
+			m->referencesDec(1);
+			return m;
+		}
+
+	protected:
+		CustomerReactor(Fwk::String name):
+			Customer::Notifiee()
+			{
+				attributesSet_[0] = attributesSet_[1] = attributesSet_[2] = 0;
+			}
+
+		bool customerIsReady() const;
+		InjectActivityReactor::Ptr InjectReactorNew();
+
+		enum Attributes {transferRate_ = 0, shipmentSize_, dest_};
+
+		InjectActivityReactor::Ptr injectReactor_;
+		int attributesSet_[3];
+		ShipmentCount transfer_rate_;
+		PackageCount shipment_size_;
+		Customer::Ptr destination_;
+	};
+
+
+	typedef Fwk::ListRaw<NotifieeConst> NotifieeList;
+	typedef NotifieeList::Iterator NotifieeIterator;
+   	NotifieeIterator notifieeIter() { return notifiee_.iterator(); }
+	U32 notifiees() const { return notifiee_.members(); }
+	
 protected:
 	Customer(Fwk::String name):
-		Location(name, Location::customer())
-		{}
+		Location(name, Location::customer()),
+		customerReactor_(CustomerReactor::CustomerReactorNew(name.append("Reactor")))
+		{
+			customerReactor_->notifierIs(this);
+		}
+
+	void newNotifiee(Customer::NotifieeConst *n) const {
+		Customer* me = const_cast<Customer*>(this);
+		me->notifiee_.newMember(n);
+	}
+	void deleteNotifiee(Customer::NotifieeConst *n) const {
+		Customer* me = const_cast<Customer*>(this);
+		me->notifiee_.deleteMember(n);
+	}
+	
+	CustomerReactor::Ptr customerReactor_;
+	NotifieeList notifiee_;
 	ShipmentCount transfer_rate_;
 	PackageCount shipment_size_;
 	Customer::Ptr destination_;
 	ShipmentCount shipments_received_;
 	Hours avg_latency_;
 	Dollars total_cost_;
-
 };
+
+class Shipment : public Fwk::NamedInterface {
+public:
+	typedef Fwk::Ptr<Shipment> Ptr;
+	typedef Fwk::Ptr<Shipment const> PtrConst;
+	
+	Customer::Ptr source() { return src_; }
+	void sourceIs(Customer::Ptr s){
+		src_ = s;
+	}
+	Customer::Ptr dest() const { return dest_; }
+	void destIs(Customer::Ptr d){
+		dest_ = d;
+	}
+	PackageCount load() const { return load_; }
+	void loadIs(PackageCount l){
+		load_ = l;
+	}
+
+protected:
+	Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p): 
+		Fwk::NamedInterface(string("(").append(s->name()).append(":").append(d->name()).append(")")),
+		src_(s),
+		dest_(d),
+		load_(p){}
+	Customer::Ptr src_;
+	Customer::Ptr dest_;
+	PackageCount load_;
+};
+
 
 class Port : public Location {
 public:
@@ -856,34 +1082,6 @@ protected:
 	size_t numTerminals_[3];
 	size_t numSegments_[3];
 	size_t numExpeditedSegments_;
-};
-
-
-class Shipment {
-public:
-	typedef Fwk::Ptr<Shipment> Ptr;
-	typedef Fwk::Ptr<Shipment const> PtrConst;
-	Customer::Ptr source() { return src_; }
-	void sourceIs(Customer::Ptr s){
-		src_ = s;
-	}
-	Customer::Ptr dest() const { return dest_; }
-	void destIs(Customer::Ptr d){
-		dest_ = d;
-	}
-	PackageCount load() const { return load_; }
-	void loadIs(PackageCount l){
-		load_ = l;
-	}
-
-protected:
-	Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p): 
-		src_(s),
-		dest_(d),
-		load_(p){}
-	Customer::Ptr src_;
-	Customer::Ptr dest_;
-	PackageCount load_;
 };
 
 } /* end namespace */

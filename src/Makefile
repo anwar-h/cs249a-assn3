@@ -5,7 +5,7 @@ ENGINE_LAYER = Engine.o
 OBJECTS = $(REP_LAYER) $(ENGINE_LAYER)
 SIDE_CODE = snippets.o
 
-ALL_OBJECTS = $(SIDE_CODE) $(OBJECTS) example.o example2.o client.o test1.o
+ALL_OBJECTS = $(SIDE_CODE) $(OBJECTS) example.o example2.o client.o test1.o activity.o
 EXECUTABLES = test1 example example2 snippets client
 
 REP_LIBS = fwk/Ptr.h fwk/PtrInterface.h
@@ -50,3 +50,4 @@ test1.o: test1.cpp $(OBJECTS)
 example.o: example.cpp $(REP_LAYER)
 example2.o: example2.cpp $(REP_LAYER)
 client.o: client.cpp $(REP_LAYER)
+ActivityImpl.o: ActivityImpl.h ActivityImpl.cpp Activity.h

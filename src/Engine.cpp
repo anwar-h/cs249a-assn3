@@ -54,6 +54,173 @@ Segment::returnSegmentIs(Ptr &r) {
 }
 
 void
+Location::arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment)
+{
+	// add this shipment to our queue
+	//TODO
+	//queue_.enq(shipment);
+	
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			try { n->onShipmentArrival(shipment); }
+			catch(...) {
+				cerr << "Location::onShipmentArrival() notification for "
+				<< shipment->name() << " unsuccessful" << endl;
+			}
+		}
+	}
+}
+
+
+void
+Location::NotifieeConst::notifierIs(const Location::PtrConst& _notifier) {
+   Location::Ptr notifierSave(const_cast<Location *>(notifier_.ptr()));
+   if(_notifier==notifier_) return;
+   notifier_ = _notifier;
+   if(notifierSave) {
+      notifierSave->deleteNotifiee(this);
+   }
+   if(_notifier) {
+      _notifier->newNotifiee(this);
+   }
+   if(isNonReferencing_) {
+      if(notifierSave) notifierSave->newRef();
+      if(notifier_) notifier_->deleteRef();
+   }
+}
+
+Location::NotifieeConst::~NotifieeConst() {
+   if(notifier_) {
+      notifier_->deleteNotifiee(this);
+   }
+   if(notifier_&&isNonReferencing()) notifier_->newRef();
+}
+
+void
+LocationReactor::onShipmentArrival(const Fwk::Ptr<Shipment> &shipment)
+{
+	//TODO
+}
+
+void
+Customer::transferRateIs(ShipmentCount tr){
+	transfer_rate_ = tr;
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			try { n->onTransferRate(tr); }
+			catch(...) {
+				cerr << "Customer::onTransferRate() notification was unsuccessful" << endl;
+			}
+		}
+	}
+}
+
+void
+Customer::shipmentSizeIs(PackageCount pc){
+	shipment_size_ = pc;
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			try { n->onShipmentSize(pc); }
+			catch(...) {
+				cerr << "Customer::onShipmentSize() notification was unsuccessful" << endl;
+			}
+		}
+	}
+}
+
+void
+Customer::destinationIs(Customer::Ptr c){
+	destination_ = c;
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			try { n->onDestination(c); }
+			catch(...) {
+				cerr << "Customer::onDestination() notification was unsuccessful" << endl;
+			}
+		}
+	}
+}
+
+void
+Customer::NotifieeConst::notifierIs(const Customer::PtrConst& _notifier) {
+   Customer::Ptr notifierSave(const_cast<Customer *>(notifier_.ptr()));
+   if(_notifier==notifier_) return;
+   notifier_ = _notifier;
+   if(notifierSave) {
+      notifierSave->deleteNotifiee(this);
+   }
+   if(_notifier) {
+      _notifier->newNotifiee(this);
+   }
+   if(isNonReferencing_) {
+      if(notifierSave) notifierSave->newRef();
+      if(notifier_) notifier_->deleteRef();
+   }
+}
+
+Customer::NotifieeConst::~NotifieeConst() {
+   if(notifier_) {
+      notifier_->deleteNotifiee(this);
+   }
+   if(notifier_&&isNonReferencing()) notifier_->newRef();
+}
+
+bool
+Customer::CustomerReactor::customerIsReady() const
+{
+	if (attributesSet_[transferRate_] &&
+		attributesSet_[shipmentSize_] &&
+		attributesSet_[dest_]) {
+		return true;
+	}
+	return false;
+}
+
+void
+Customer::CustomerReactor::onTransferRate(ShipmentCount transferRate)
+{
+	//TODO
+	attributesSet_[transferRate_] = 1;
+	if (customerIsReady() && !injectReactor_) {
+		// create inject activity
+	}
+}
+
+void
+Customer::CustomerReactor::onShipmentSize(PackageCount shipmentSize)
+{
+	//TODO
+	attributesSet_[shipmentSize_] = 1;
+	if (customerIsReady() && !injectReactor_) {
+		// create inject activity
+	}
+}
+
+void
+Customer::CustomerReactor::onDestination(Customer::Ptr destination)
+{
+	//TODO
+	attributesSet_[dest_] = 1;
+	if (customerIsReady() && !injectReactor_) {
+		// create inject activity
+	}
+}
+
+
+InjectActivityReactor::Ptr
+Customer::CustomerReactor::InjectReactorNew()
+{
+	//TODO
+	//injectReactor_ = InjectActivityReactor::InjectActivityReactorNew(manager, activity, rate);
+	return InjectActivityReactor::Ptr();
+}
+
+
+void
 Terminal::segmentIs(const Segment::PtrConst &s)
 {
 	if (s->mode() == vehicleType()) {

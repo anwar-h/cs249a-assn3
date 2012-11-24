@@ -2,24 +2,99 @@
 #define __ACTIVITY_IMPL_H__
 
 #include "Activity.h"
+#include <map>
+#include <string>
+#include <queue>
+#include <vector>
 
-Ptr<Activity::Manager> activityManagerInstance();
+Fwk::Ptr<Activity::Manager> activityManagerInstance();
 
 namespace ActivityImpl {
 
+//Comparison class for activities   
+class ActivityComp {
+public:
+	ActivityComp() {}
+
+	bool operator()(Activity::Ptr a, Activity::Ptr b) const {
+		return (a->nextTime() > b->nextTime());
+	}
+};
+    
+
 class ActivityImpl : public Activity {
+protected:
+    ActivityImpl(const string& name, Fwk::Ptr<class ManagerImpl> manager):
+    	Activity(name),
+    	status_(free),
+    	nextTime_(0.0),
+    	notifiee_(NULL),
+    	manager_(manager)
+    	{}
+        
+	Fwk::Ptr<class ManagerImpl> manager() const { return manager_; }
 
-    /* Write this class */
+	virtual Status status() const { return status_; }
+	virtual void statusIs(Status s) {
+		status_ = s;
+		if (notifiee_ != NULL) {
+			notifiee_->onStatus();
+		}
+	}
 
+	virtual Time nextTime() const { return nextTime_; }
+	virtual void nextTimeIs(Time t) {
+		nextTime_ = t;
+		if (notifiee_ != NULL) {
+			notifiee_->onNextTime();
+		}
+	}
+
+	virtual Notifiee::Ptr notifiee() const { return notifiee_; }
+
+	virtual void lastNotifieeIs(Notifiee* n) {
+		ActivityImpl* me = const_cast<ActivityImpl*>(this);
+		me->notifiee_ = n;
+	}
+private:
+	friend class ManagerImpl;
+	Status status_;
+	Time nextTime_;
+	Notifiee* notifiee_;
+	Fwk::Ptr<class ManagerImpl> manager_;
 };
 
 class ManagerImpl : public Activity::Manager {
+public:
+	typedef Fwk::Ptr<ManagerImpl> Ptr;
 
-    /* Write this class */
+	virtual Activity::Ptr activityNew(const string& name);
+	virtual Activity::Ptr activity(const string& name) const;
+	virtual void activityDel(const string& name);
 
+	virtual Time now() const { return now_; }
+	virtual void nowIs(Time time);
+
+	static Fwk::Ptr<Activity::Manager> activityManagerInstance();
+
+	virtual void lastActivityIs(Activity::Ptr activity);
+
+protected:
+    ManagerImpl():
+    	Manager("activityManager"),
+    	now_(0)
+    	{}
+
+	//Data members
+	std::priority_queue<Activity::Ptr, std::vector<Activity::Ptr>, ActivityComp> scheduledActivities_;
+	std::map<string, Activity::Ptr> activities_; //pool of all activities
+	Time now_;
+
+	//singleton instance
+	static Fwk::Ptr<Activity::Manager> activityInstance_;
 };
 
-}
+} // end namespace ActivityImpl
 
 #endif /* __ACTIVITY_IMPL_H__ */
 
