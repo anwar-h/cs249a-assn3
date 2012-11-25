@@ -54,12 +54,61 @@ Segment::returnSegmentIs(Ptr &r) {
 }
 
 void
+Segment::NotifieeConst::notifierIs(const Segment::PtrConst& _notifier) {
+	Segment::Ptr notifierSave(const_cast<Segment *>(notifier_.ptr()));
+	if(_notifier==notifier_) return;
+	notifier_ = _notifier;
+	if(notifierSave) {
+		notifierSave->deleteNotifiee(this);
+	}
+	if(_notifier) {
+		_notifier->newNotifiee(this);
+	}
+	if(isNonReferencing_) {
+		if(notifierSave) notifierSave->newRef();
+		if(notifier_) notifier_->deleteRef();
+	}
+}
+
+Segment::NotifieeConst::~NotifieeConst() {
+	if(notifier_) {
+		notifier_->deleteNotifiee(this);
+	}
+	if(notifier_&&isNonReferencing()) notifier_->newRef();
+}
+
+void
+Segment::arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment)
+{
+	//TODO
+
+	// add this shipment to our queue
+	shipmentQueue_.push(shipment);
+	
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			try { n->onShipmentArrival(shipment); }
+			catch(...) {
+				cerr << "Segment::onShipmentArrival() notification for "
+				<< shipment->name() << " unsuccessful" << endl;
+			}
+		}
+	}
+}
+
+
+void
+Segment::SegmentReactor::onShipmentArrival(const Fwk::Ptr<Shipment> &shipment)
+{
+	//TODO
+
+}
+
+void
 Location::arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment)
 {
-	// add this shipment to our queue
 	//TODO
-	//queue_.enq(shipment);
-	
 	// tell all the notifiees
 	if(notifiees()) {
 		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
@@ -98,7 +147,7 @@ Location::NotifieeConst::~NotifieeConst() {
 }
 
 void
-LocationReactor::onShipmentArrival(const Fwk::Ptr<Shipment> &shipment)
+Location::LocationReactor::onShipmentArrival(const Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
 }
