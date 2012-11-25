@@ -325,23 +325,23 @@ TEST_F(LocationTest, TerminalLocationSegmentAttr) {
 }
 
 TEST_F(LocationTest, SegmentDel) {
-		
+	EXPECT_EQ(1, 0);
 
 }
 TEST_F(LocationTest, SegmentIteratorBegin) {
-	
+	EXPECT_EQ(1, 0);	
 
 }
 TEST_F(LocationTest, SegmentIteratorEnd) {
-	
+	EXPECT_EQ(1, 0);
 
 }
 TEST_F(LocationTest, SegmentIteratorConstBegin) {
-	
+	EXPECT_EQ(1, 0);
 
 }
 TEST_F(LocationTest, SegmentIteratorConstEnd) {
-	
+	EXPECT_EQ(1, 0);
 
 }
 

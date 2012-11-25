@@ -17,7 +17,7 @@ GUNIT_BASE += gtest-1.6.0
 GUNIT_PATH += $(GUNIT_BASE)/include
 
 # The main source file names you will need to test.
-ENGINE_LIBS = $(SRC_PATH)/fwk/BaseCollection.o $(SRC_PATH)/fwk/BaseNotifiee.o $(SRC_PATH)/fwk/Exception.o $(SRC_PATH)/Nominal.h
+ENGINE_LIBS = $(SRC_PATH)/fwk/BaseCollection.o $(SRC_PATH)/fwk/BaseNotifiee.o $(SRC_PATH)/fwk/Exception.o $(SRC_PATH)/Nominal.h $(SRC_PATH)/ActivityImpl.o
 MAIN_FILES += Engine Instance
 
 # The objects corresponding to the tested files.
