@@ -652,36 +652,6 @@ protected:
 	Dollars total_cost_;
 };
 
-class Shipment : public Fwk::NamedInterface {
-public:
-	typedef Fwk::Ptr<Shipment> Ptr;
-	typedef Fwk::Ptr<Shipment const> PtrConst;
-	
-	Customer::Ptr source() { return src_; }
-	void sourceIs(Customer::Ptr s){
-		src_ = s;
-	}
-	Customer::Ptr dest() const { return dest_; }
-	void destIs(Customer::Ptr d){
-		dest_ = d;
-	}
-	PackageCount load() const { return load_; }
-	void loadIs(PackageCount l){
-		load_ = l;
-	}
-
-protected:
-	Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p): 
-		Fwk::NamedInterface(string("(").append(s->name()).append(":").append(d->name()).append(")")),
-		src_(s),
-		dest_(d),
-		load_(p){}
-	Customer::Ptr src_;
-	Customer::Ptr dest_;
-	PackageCount load_;
-};
-
-
 class Port : public Location {
 public:
 	typedef Fwk::Ptr<Port> Ptr;
@@ -867,6 +837,38 @@ protected:
 	Hours hours_;
 	Mile distance_;
 };
+
+class Shipment : public Fwk::NamedInterface {
+public:
+	typedef Fwk::Ptr<Shipment> Ptr;
+	typedef Fwk::Ptr<Shipment const> PtrConst;
+	
+	Customer::Ptr source() { return src_; }
+	void sourceIs(Customer::Ptr s) { src_ = s; }
+
+	Customer::Ptr dest() const { return dest_; }
+	void destIs(Customer::Ptr d) { dest_ = d; }
+
+	PackageCount load() const { return load_; }
+	void loadIs(PackageCount l) { load_ = l; }
+
+	Path::PtrConst path() const { return path_; }
+	void pathIs(const Path::PtrConst &path) { path_ = path; }
+
+protected:
+	Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p): 
+		Fwk::NamedInterface(string("(").append(s->name()).append(":").append(d->name()).append(")")),
+		src_(s),
+		dest_(d),
+		load_(p)
+		{}
+
+	Customer::Ptr src_;
+	Customer::Ptr dest_;
+	PackageCount load_;
+	Path::PtrConst path_;
+};
+
 
 class Connectivity : public Fwk::NamedInterface {
 public:

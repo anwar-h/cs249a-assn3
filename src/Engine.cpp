@@ -150,6 +150,13 @@ void
 Location::LocationReactor::onShipmentArrival(const Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
+	if (notifier()->locationType() == customer() &&
+		shipment->dest()->name() == notifier()->name()) {
+		//at destination
+	}
+	else {
+		// call Segment::arrivingShipmentIs() for the next part of path
+	}
 }
 
 void
