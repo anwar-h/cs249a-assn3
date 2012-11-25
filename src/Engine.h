@@ -669,8 +669,11 @@ protected:
 	Dollars cost_per_mile_[3];
 };
 
-class Path {
+class Path : public Fwk::NamedInterface {
 public:
+	typedef Fwk::Ptr<Path> Ptr;
+	typedef Fwk::Ptr<Path const> PtrConst;
+
 	enum PartType {
 		nil_ = 0,
 		segment_,
@@ -724,12 +727,17 @@ public:
 	
 	string stringValue() const;
 
-	static Path* PathNew(const Fleet::PtrConst &f) {
-		return new Path(f);
+
+	static Path::Ptr PathNew(const Fleet::PtrConst &f) {
+		Ptr m = new Path(f);
+		m->referencesDec(1);
+		// decr. refer count to compensate for initial val of 1
+		return m;
 	}
 
 protected:
 	Path(const Fleet::PtrConst &f):
+		Fwk::NamedInterface("path"),
 		fleet_(f),
 		numSegments_(0),
 		numLocations_(0),
@@ -847,9 +855,9 @@ protected:
 		mask_(0)
 		{}
 
-	bool isValidExplorePath(Path *path) const;
-	bool isValidExplorePathNotExpedited(Path *one, Path* two) const;
-	vector<string> stringifyPaths(SearchPattern pattern, vector<Path*> &completedPaths) const;
+	bool isValidExplorePath(Path::Ptr path) const;
+	bool isValidExplorePathNotExpedited(Path::Ptr one, Path::Ptr two) const;
+	vector<string> stringifyPaths(SearchPattern pattern, vector<Path::Ptr> &completedPaths) const;
 
 	Segment::ExpediteSupport expedited_;
 	int mask_;

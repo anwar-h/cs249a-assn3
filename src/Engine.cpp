@@ -187,6 +187,7 @@ Customer::CustomerReactor::onTransferRate(ShipmentCount transferRate)
 	attributesSet_[transferRate_] = 1;
 	if (customerIsReady() && !injectReactor_) {
 		// create inject activity
+		injectReactor_ = InjectReactorNew();
 	}
 }
 
@@ -197,6 +198,7 @@ Customer::CustomerReactor::onShipmentSize(PackageCount shipmentSize)
 	attributesSet_[shipmentSize_] = 1;
 	if (customerIsReady() && !injectReactor_) {
 		// create inject activity
+		injectReactor_ = InjectReactorNew();
 	}
 }
 
@@ -207,6 +209,7 @@ Customer::CustomerReactor::onDestination(Customer::Ptr destination)
 	attributesSet_[dest_] = 1;
 	if (customerIsReady() && !injectReactor_) {
 		// create inject activity
+		injectReactor_ = InjectReactorNew();
 	}
 }
 
@@ -390,7 +393,7 @@ Connectivity::constraintsActiveIs(int mask)
 }
 
 void
-queueOrStore(Path *path, const Location::PtrConst &end, queue<Path*> &pathQueue, vector<Path*> &expeditedPaths, vector<Path*> &notExpeditedPaths)
+queueOrStore(Path::Ptr path, const Location::PtrConst &end, queue<Path::Ptr> &pathQueue, vector<Path::Ptr> &expeditedPaths, vector<Path::Ptr> &notExpeditedPaths)
 {
 	if (path->end()->name() == end->name()) {
 		if (path->expedited() == Segment::expediteSupported()) {
@@ -402,17 +405,18 @@ queueOrStore(Path *path, const Location::PtrConst &end, queue<Path*> &pathQueue,
 	}
 }
 
-Path* copyPath(Path *original, Fleet::PtrConst fleet, const Location::PtrConst &nextLocation, const Segment::PtrConst &nextSegment)
+Path::Ptr
+copyPath(Path::Ptr original, Fleet::PtrConst fleet, const Location::PtrConst &nextLocation, const Segment::PtrConst &nextSegment)
 {
-	Path *copy = Path::PathNew(fleet);
-	*copy = *original;
+	Path::Ptr copy = Path::PathNew(fleet);
+	*(copy.ptr()) = *(original.ptr());
 	copy->endSegmentIs(nextSegment);
 	copy->endLocationIs(nextLocation);
 	return copy;
 }
 
 bool
-Connectivity::isValidExplorePath(Path *path) const
+Connectivity::isValidExplorePath(Path::Ptr path) const
 {
 	int constraints = constraintsActive();
 	bool validPath = true;
@@ -445,11 +449,11 @@ Connectivity::isValidExplorePath(Path *path) const
 }
 
 bool
-Connectivity::isValidExplorePathNotExpedited(Path *one, Path* two) const
+Connectivity::isValidExplorePathNotExpedited(Path::Ptr one, Path::Ptr two) const
 {
 	one->expeditedIs(Segment::expediteNotSupported());
 	if (isValidExplorePath(one)) {
-		*two = *one;
+		*(two.ptr()) = *(one.ptr());
 		return true;
 	}
 	return false;
@@ -461,18 +465,18 @@ Connectivity::paths(SearchPattern pattern) const
 {
 	typedef Location::SegmentIteratorConst SegmentIteratorConst;
 
-	Path *startPath = Path::PathNew(fleet());
+	Path::Ptr startPath = Path::PathNew(fleet());
 	startPath->endLocationIs(constraintStart());
 
-	queue<Path*> pathQueue;
+	queue<Path::Ptr> pathQueue;
 	pathQueue.push(startPath);
 
-	vector<Path*> notExpeditedPaths;
-	vector<Path*> expeditedPaths;
-	vector<Path*> completedPaths;
+	vector<Path::Ptr> notExpeditedPaths;
+	vector<Path::Ptr> expeditedPaths;
+	vector<Path::Ptr> completedPaths;
 
 	while(pathQueue.size() > 0) {
-		Path *curr = pathQueue.front();
+		Path::Ptr curr = pathQueue.front();
 		Location::PtrConst jumpingOffLocation = curr->end();
 		pathQueue.pop();
 
@@ -487,8 +491,8 @@ Connectivity::paths(SearchPattern pattern) const
 
 			if (pattern == Connectivity::explore()) {
 				if (curr->locationMembershipStatus(nextLocation) == Path::notMember()) {
-					Path* copy = copyPath(curr, fleet(), nextLocation, nextSegment);
-					Path* copy2 = copyPath(curr, fleet(), nextLocation, nextSegment);
+					Path::Ptr copy = copyPath(curr, fleet(), nextLocation, nextSegment);
+					Path::Ptr copy2 = copyPath(curr, fleet(), nextLocation, nextSegment);
 					if (isValidExplorePath(copy) || isValidExplorePathNotExpedited(copy, copy2)) {
 						if (copy->expedited() == Segment::expediteSupported()) {
 							expeditedPaths.push_back(copy);
@@ -499,14 +503,14 @@ Connectivity::paths(SearchPattern pattern) const
 						pathQueue.push(copy2);
 					}
 					else { 
-						delete copy;
-						delete copy2;
+						//delete copy;
+						//delete copy2;
 					}
 				}
 			}
 			else if (pattern == Connectivity::connect()) {
 				if (curr->locationMembershipStatus(nextLocation) == Path::notMember()) {
-					Path* copy = copyPath(curr, fleet(), nextLocation, nextSegment);
+					Path::Ptr copy = copyPath(curr, fleet(), nextLocation, nextSegment);
 					if (copy->end()->name() == constraintEnd()->name()) {
 						if (copy->expedited() == Segment::expediteSupported()) {
 							expeditedPaths.push_back(copy);
@@ -519,8 +523,7 @@ Connectivity::paths(SearchPattern pattern) const
 				}
 			}
 		}
-
-		delete curr;
+		//delete curr;
 	}
 
 	for(size_t i = 0; i < notExpeditedPaths.size(); i++) {
@@ -529,8 +532,8 @@ Connectivity::paths(SearchPattern pattern) const
 
 	for(size_t i = 0; i < expeditedPaths.size(); i++) {
 		if (pattern == Connectivity::connect()) {
-			Path* unexpeditedCopy = Path::PathNew(fleet());
-			*unexpeditedCopy = *(expeditedPaths[i]);
+			Path::Ptr unexpeditedCopy = Path::PathNew(fleet());
+			*(unexpeditedCopy.ptr()) = *(expeditedPaths[i].ptr());
 			unexpeditedCopy->expeditedIs(Segment::expediteNotSupported());
 			completedPaths.push_back(unexpeditedCopy);
 		}
@@ -541,11 +544,11 @@ Connectivity::paths(SearchPattern pattern) const
 }
 
 vector<string>
-Connectivity::stringifyPaths(SearchPattern pattern, vector<Path*> &completedPaths) const
+Connectivity::stringifyPaths(SearchPattern pattern, vector<Path::Ptr> &completedPaths) const
 {
 	vector<string> completed;
 	for(size_t i = 0; i < completedPaths.size(); i++) {
-		Path *path = completedPaths[i];
+		Path::Ptr path = completedPaths[i];
 		stringstream pathString;
 
 		if (pattern == Connectivity::connect()) {
@@ -562,9 +565,9 @@ Connectivity::stringifyPaths(SearchPattern pattern, vector<Path*> &completedPath
 		completed.push_back(pathString.str());
 	}
 
-	for(size_t i = 0; i < completedPaths.size(); i++) {
-		delete completedPaths[i];
-	}
+	//for(size_t i = 0; i < completedPaths.size(); i++) {
+	//	delete completedPaths[i];
+	//}
 	completedPaths.erase(completedPaths.begin(), completedPaths.end());
 	return completed;
 }
