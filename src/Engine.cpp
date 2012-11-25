@@ -632,6 +632,12 @@ Network::location(const Fwk::String &name) {
 	return found->second;
 }
 
+map<string, Path::Ptr>
+preprocessRoutes()
+{
+	//TODO
+}
+
 void
 Network::expediteSupportIs(Fwk::String name, Segment::ExpediteSupport supported)
 {

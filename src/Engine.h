@@ -12,7 +12,6 @@
 #include "fwk/String.h"
 #include "Instance.h"
 #include "Nominal.h"
-#include "ActivityImpl.h"
 #include "ActivityReactor.h"
 #include <string>
 #include <sstream>
@@ -1084,7 +1083,11 @@ public:
 protected:
 	Network(Fwk::String name):
 		Fwk::NamedInterface(name)
-		{}
+		{
+			preprocessRoutes();
+		}
+
+	map<string, Path::Ptr> preprocessRoutes();
 
 	void newNotifiee(Network::NotifieeConst *n) const {
 		Network* me = const_cast<Network*>(this);
