@@ -2,7 +2,7 @@ CXXFLAGS = -Wall -g
 
 REP_LAYER = Instance.o
 ENGINE_LAYER = Engine.o
-OBJECTS = $(REP_LAYER) $(ENGINE_LAYER)
+OBJECTS = $(REP_LAYER) $(ENGINE_LAYER) ActivityImpl.o
 SIDE_CODE = snippets.o
 
 ALL_OBJECTS = $(SIDE_CODE) $(OBJECTS) example.o example2.o client.o test1.o activity.o
@@ -44,7 +44,7 @@ $(SUBDIRS):
  
 
 Engine.o: Engine.h Engine.cpp
-Instance.o: Instance.cpp Instance.h $(REP_LIBS) Engine.o
+Instance.o: Instance.cpp Instance.h $(REP_LIBS) Engine.o ActivityImpl.o
 
 test1.o: test1.cpp $(OBJECTS)
 example.o: example.cpp $(REP_LAYER)

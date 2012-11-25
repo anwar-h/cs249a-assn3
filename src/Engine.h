@@ -12,6 +12,7 @@
 #include "fwk/String.h"
 #include "Instance.h"
 #include "Nominal.h"
+#include "ActivityImpl.h"
 #include "ActivityReactor.h"
 #include <string>
 #include <sstream>
@@ -1082,9 +1083,10 @@ public:
 	
 protected:
 	Network(Fwk::String name):
-		Fwk::NamedInterface(name)
+		Fwk::NamedInterface(name),
+		activityManager_(activityManagerInstance())
 		{
-			preprocessRoutes();
+			srcDestPaths_ = preprocessRoutes();
 		}
 
 	map<string, Path::Ptr> preprocessRoutes();
@@ -1107,13 +1109,14 @@ protected:
 
 	void locationSegmentsDel(Location::Ptr m);
 
-
+	Fwk::Ptr<Activity::Manager> activityManager_;
 	NotifieeList notifiee_;
 	map<Fwk::String, Location::Ptr> locations_;
 	map<Fwk::String, Segment::Ptr> segments_;
 	Fleet::Ptr fleet_;
 	Fwk::Ptr<Statistics> statistics_;
 	Connectivity::Ptr connectivity_;
+	map<string, Path::Ptr> srcDestPaths_;
 };
 
 class Statistics : public Network::Notifiee {

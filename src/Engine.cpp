@@ -633,9 +633,10 @@ Network::location(const Fwk::String &name) {
 }
 
 map<string, Path::Ptr>
-preprocessRoutes()
+Network::preprocessRoutes()
 {
 	//TODO
+	return map<string, Path::Ptr>();
 }
 
 void
