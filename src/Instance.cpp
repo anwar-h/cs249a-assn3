@@ -675,7 +675,7 @@ void FleetRep::attributeIs(const string& name, const string& v) {
 
 //---------------------MANAGER-----------------------------------------------
 
-ManagerImpl::ManagerImpl() : network_(Network::NetworkNew("network"))
+ManagerImpl::ManagerImpl() : network_(networkInstance())
 {
 
 }

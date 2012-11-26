@@ -207,8 +207,8 @@ public:
 
 	void arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment);
 
-	ShipmentCount capacity() const { return capacity_; }
-	void capacityIs(ShipmentCount c){
+	PackageCount capacity() const { return capacity_; }
+	void capacityIs(PackageCount c){
 		capacity_ = c;
 	}
 
@@ -291,10 +291,13 @@ public:
 
 	protected:
 		SegmentReactor(const Segment::Ptr &notifier):
-			Segment::Notifiee()
+			Segment::Notifiee(),
+			activityManager_(activityManagerInstance())
 			{
 				notifierIs(notifier);
 			}
+
+		Activity::Manager::Ptr activityManager_;
 	};
 
 	typedef Fwk::ListRaw<NotifieeConst> NotifieeList;
@@ -329,7 +332,7 @@ protected:
 	Segment::Ptr return_segment_;
 	Difficulty difficulty_;
 	ExpediteSupport exp_support_;
-	ShipmentCount capacity_;
+	PackageCount capacity_;
 	ShipmentCount shipments_received_;
 	ShipmentCount shipments_refused_;
 };
@@ -360,12 +363,10 @@ public:
 		segments_.push_back(s);
 	}
 	void segmentDel(const Fwk::String &name) {
-		for(vector<Segment::PtrConst>::iterator it = segments_.begin(); it != segments_.end(); ++it) {
-			if ((*it)->name() == name) {
-				segments_.erase(it);		
-				break;
-			}
-		}
+		vector<Segment::PtrConst>::iterator it = segmentIterator(name);
+		if (it != segments_.end())
+			segments_.erase(it);		
+		else cerr << "Engine.h:"<<__LINE__<<": Location::segmentDel() name does not exist." << endl;
 	}
 
 	void arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment);
@@ -476,7 +477,8 @@ public:
 protected:
 	Location(Fwk::String name, LocationType location_type):
 		Fwk::NamedInterface(name),
-		location_type_(location_type)
+		location_type_(location_type),
+		locationReactor_(LocationReactor::LocationReactorNew(this))
 		{}
 
 	void newNotifiee(Location::NotifieeConst *n) const {
@@ -487,10 +489,22 @@ protected:
 		Location* me = const_cast<Location*>(this);
 		me->notifiee_.deleteMember(n);
 	}
+
+	vector<Segment::PtrConst>::iterator
+	segmentIterator(const string &name) {
+		vector<Segment::PtrConst>::iterator it;
+		for(it = segments_.begin(); it != segments_.end(); ++it) {
+			if ((*it)->name() == name) {
+				break;
+			}
+		}
+		return it;
+	}
 	
 	NotifieeList notifiee_;
 	vector<Segment::PtrConst> segments_;
 	LocationType location_type_;
+	LocationReactor::Ptr locationReactor_;
 };
 
 class Customer : public Location {
@@ -774,8 +788,10 @@ public:
 		Segment::PtrConst seg;
 	};
 
+	Part part(size_t index) const { return path_[index]; }
 	Location::PtrConst start() const { return start_; }
 	Location::PtrConst end() const { return endLocation_; }
+	size_t locationIndex(const Location::PtrConst &location) const;
 	Membership locationMembershipStatus(const Location::PtrConst &location) const;
 
 	void endLocationIs(const Location::PtrConst &newEnd);
@@ -783,7 +799,8 @@ public:
 
 	size_t numSegments() const { return numSegments_; }
 	size_t numLocations() const { return numLocations_; }
-	
+	size_t numParts() const { return numSegments() + numLocations(); }
+
 	Hours hours() const { return hours_; }
 	Dollars cost() const { return cost_; }
 	Mile distance() const { return distance_; }
@@ -982,6 +999,7 @@ public:
 		return found->second;
 	}
 
+
 	void expediteSupportIs(Fwk::String name, Segment::ExpediteSupport supported);
 	Segment::Ptr segmentNew(Fwk::String name, Segment::Mode mode);
 	Segment::Ptr segmentDel(Fwk::String name);
@@ -1004,6 +1022,7 @@ public:
 	Connectivity::Ptr connectivityNew(Fwk::String name);
 	Connectivity::Ptr connectivityDel(Fwk::String name);
 
+	static Network::Ptr networkInstance();
 
 	static Network::Ptr NetworkNew(Fwk::String name) {
 		Ptr m = new Network(name);
@@ -1085,13 +1104,8 @@ public:
 	
 protected:
 	Network(Fwk::String name):
-		Fwk::NamedInterface(name),
-		activityManager_(activityManagerInstance())
-		{
-			srcDestPaths_ = preprocessRoutes();
-		}
-
-	map<string, Path::Ptr> preprocessRoutes();
+		Fwk::NamedInterface(name)
+		{}
 
 	void newNotifiee(Network::NotifieeConst *n) const {
 		Network* me = const_cast<Network*>(this);
@@ -1111,15 +1125,24 @@ protected:
 
 	void locationSegmentsDel(Location::Ptr m);
 
-	Fwk::Ptr<Activity::Manager> activityManager_;
 	NotifieeList notifiee_;
 	map<Fwk::String, Location::Ptr> locations_;
 	map<Fwk::String, Segment::Ptr> segments_;
 	Fleet::Ptr fleet_;
 	Fwk::Ptr<Statistics> statistics_;
 	Connectivity::Ptr connectivity_;
-	map<string, Path::Ptr> srcDestPaths_;
 };
+
+//Definition of static member
+Network::Ptr Network::networkInstance_ = Network::Ptr();
+
+//Gets the singleton instance of Network
+Network::Ptr Network::networkInstance() {
+	if (!networkInstance_) {
+		networkInstance_ = Network::NetworkNew("network");
+	}
+	return networkInstance_;
+}
 
 class Statistics : public Network::Notifiee {
 public:
@@ -1197,5 +1220,9 @@ protected:
 };
 
 } /* end namespace */
+
+Shipping::Network::Ptr networkInstance() {
+    return Shipping::Network::networkInstance();
+}
 
 #endif
