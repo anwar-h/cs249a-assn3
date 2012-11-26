@@ -611,18 +611,18 @@ public:
 
 	protected:
 		CustomerReactor(const Customer::Ptr &notifier):
-			Customer::Notifiee()
+			Customer::Notifiee(),
+			activityManager_(activityManagerInstance())
 			{
 				notifierIs(notifier);
 				attributesSet_[0] = attributesSet_[1] = attributesSet_[2] = 0;
 			}
 
-		bool customerIsReady() const;
-		InjectActivityReactor::Ptr InjectReactorNew();
-
 		enum Attributes {transferRate_ = 0, shipmentSize_, dest_};
-
-		InjectActivityReactor::Ptr injectReactor_;
+		bool customerIsReady() const;
+		void InjectActivityReactorNew();
+		
+		Activity::Manager::Ptr activityManager_;
 		int attributesSet_[3];
 		ShipmentCount transfer_rate_;
 		PackageCount shipment_size_;
@@ -875,7 +875,7 @@ public:
 
 protected:
 	Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p);
-	
+
 	Customer::Ptr src_;
 	Customer::Ptr dest_;
 	PackageCount load_;

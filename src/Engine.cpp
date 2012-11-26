@@ -277,10 +277,7 @@ Customer::CustomerReactor::onTransferRate(ShipmentCount transferRate)
 {
 	//TODO
 	attributesSet_[transferRate_] = 1;
-	if (customerIsReady() && !injectReactor_) {
-		// create inject activity
-		injectReactor_ = InjectReactorNew();
-	}
+	if (customerIsReady()) InjectActivityReactorNew();
 }
 
 void
@@ -288,10 +285,7 @@ Customer::CustomerReactor::onShipmentSize(PackageCount shipmentSize)
 {
 	//TODO
 	attributesSet_[shipmentSize_] = 1;
-	if (customerIsReady() && !injectReactor_) {
-		// create inject activity
-		injectReactor_ = InjectReactorNew();
-	}
+	if (customerIsReady()) InjectActivityReactorNew();
 }
 
 void
@@ -299,19 +293,24 @@ Customer::CustomerReactor::onDestination(Customer::Ptr destination)
 {
 	//TODO
 	attributesSet_[dest_] = 1;
-	if (customerIsReady() && !injectReactor_) {
-		// create inject activity
-		injectReactor_ = InjectReactorNew();
-	}
+	if (customerIsReady()) InjectActivityReactorNew();
 }
 
 
-InjectActivityReactor::Ptr
-Customer::CustomerReactor::InjectReactorNew()
+void
+Customer::CustomerReactor::InjectActivityReactorNew()
 {
 	//TODO
-	//injectReactor_ = InjectActivityReactor::InjectActivityReactorNew(manager, activity, rate);
-	return InjectActivityReactor::Ptr();
+	static bool beenHere = false;
+	if (!beenHere) {
+		beenHere = true;
+	}
+	else return;
+
+	Activity::Ptr activity = activityManager_->activityNew("Inject");
+	activity->lastNotifieeIs( new InjectActivityReactor(activityManager_, activity.ptr(), 24.0) );
+	activity->nextTimeIs(activityManager_->now().value());
+	activity->statusIs(Activity::nextTimeScheduled);
 }
 
 
@@ -469,8 +468,6 @@ Shipment::Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p):
 			throw Fwk::EntityNotFoundException("shipment path does not exist");
 		}
 	}
-
-
 
 void
 Connectivity::constraintsActiveDel()
