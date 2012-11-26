@@ -34,7 +34,7 @@ namespace ActivityImpl {
 	virtual void statusIs(Status s) {
 	    status_ = s;
 	    if (notifiee_ != NULL) {
-		notifiee_->onStatus();
+			notifiee_->onStatus();
 	    }
 	}
 
@@ -42,7 +42,7 @@ namespace ActivityImpl {
 	virtual void nextTimeIs(Time t) {
 	    nextTime_ = t;
 	    if (notifiee_ != NULL) {
-	    notifiee_->onNextTime();
+	    	notifiee_->onNextTime();
 	    }
 	}
 
@@ -57,8 +57,8 @@ namespace ActivityImpl {
     private:
         friend class ManagerImpl;
         Status status_;
-	Time nextTime_;
-	Notifiee* notifiee_;
+		Time nextTime_;
+		Notifiee* notifiee_;
         Fwk::Ptr<class ManagerImpl> manager_;
     };
     
