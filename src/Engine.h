@@ -960,10 +960,23 @@ public:
 		routing_method_ = rm;
 	}
 	Path::Ptr shipmentPath(const string &s){
-		//return either dijkstra or bfs route. 
-		//look up that string in the map and return the path accordingly!
+		map<string, Path::Ptr>::iterator it;
+		Path::Ptr p;
 
-		//if path not found, (using map.find = map::end)
+		if(routingMethod() == bfs()){
+			it = routes_bfs_.find(s);
+			if (it != routes_bfs_.end()) {
+				p = it->second;
+				return p;
+			} 
+		}
+		if(routingMethod() == dijkstra()){
+			it = routes_dijkstra_.find(s);
+			if (it != routes_dijkstra_.end()) {
+				p = it->second;
+				return p;
+			} 
+		}
 		return Path::Ptr();
 	}
 
@@ -974,6 +987,7 @@ protected:
 		mask_(0),
 		routing_method_(dijkstra())
 		{
+			//SHOULD NOT BE INITIALIZED HERE, AS LOCS MAY CHANGE BEFORE ANYTHING HAPPENS!
 			routes_dijkstra_ = routes(dijkstra());
 			routes_bfs_ = routes(bfs());
 		}
@@ -997,7 +1011,6 @@ protected:
 	RoutingMethod routing_method_;
 	map<string, Path::Ptr> routes_dijkstra_;
 	map<string, Path::Ptr> routes_bfs_;
-	//TODO: ADD OTHER PREPROCESS MAPS HERE
 	
 };
 
