@@ -3,6 +3,14 @@
 
 namespace Shipping {
 
+Segment::Segment(Fwk::String name, Mode mode):
+	Fwk::NamedInterface(name),
+	segmentReactor_(SegmentReactor::SegmentReactorNew(this)),
+	mode_(mode),
+	exp_support_(Segment::expediteNotSupported()),
+	capacity_(10 * networkInstance()->fleet()->capacity(mode).value())
+	{}
+
 string
 Segment::modeName(Mode m)
 {
@@ -81,19 +89,27 @@ void
 Segment::arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
+	if (shipment->load() <= capacity()) {
+		// our capacity is decreased cause we are taking this shipment
+		capacityIs(PackageCount(capacity().value() - shipment->load().value()));
 
-	// add this shipment to our queue
-	shipmentQueue_.push(shipment);
+		// add this shipment to our queue
+		shipmentQueue_.push(shipment);
+
 	
-	// tell all the notifiees
-	if(notifiees()) {
-		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
-			try { n->onShipmentArrival(shipment); }
-			catch(...) {
-				cerr << "Segment::onShipmentArrival() notification for "
-				<< shipment->name() << " unsuccessful" << endl;
+		// tell all the notifiees
+		if(notifiees()) {
+			for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+				try { n->onShipmentArrival(shipment); }
+				catch(...) {
+					cerr << "Segment::onShipmentArrival() notification for "
+					<< shipment->name() << " unsuccessful" << endl;
+				}
 			}
 		}
+	}
+	else {
+		// send it back from whence it came
 	}
 }
 
@@ -102,7 +118,13 @@ void
 Segment::SegmentReactor::onShipmentArrival(const Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
-
+	Activity::Ptr activity = activityManager_->activityNew("Forwarding");
+	activity->lastNotifieeIs( new ForwardActivityReactor(activityManager_, activity.ptr()) );
+	Segment::Ptr seg = notifier();
+	Fleet::PtrConst fleet = networkInstance()->fleet();
+	Time timeToTraverse = Time(seg->length().value() / fleet->speed(seg->mode()).value());
+	activity->nextTimeIs(activityManager_->now().value() + timeToTraverse.value());
+	activity->statusIs(Activity::nextTimeScheduled);
 }
 
 void
@@ -153,8 +175,22 @@ Location::LocationReactor::onShipmentArrival(const Fwk::Ptr<Shipment> &shipment)
 	if (notifier()->locationType() == customer() &&
 		shipment->dest()->name() == notifier()->name()) {
 		//at destination
+
+		//record statistics
 	}
 	else {
+		try {
+			size_t thisLocationIndex = shipment->path()->locationIndex(notifier());
+			if (thisLocationIndex + 1 < shipment->path()->numParts()) {
+				Segment::PtrConst s = shipment->path()->part(thisLocationIndex + 1).seg;
+				Segment::Ptr segment = const_cast<Segment*>(s.ptr());
+				segment->arrivingShipmentIs(shipment);
+			}
+			else cerr << __FILE__":"<<__LINE__<<": LocationReactor::onShipmentArival() next segment index out of bounds." << endl;
+		} catch(...) {
+
+		}
+
 		// call Segment::arrivingShipmentIs() for the next part of path
 	}
 }
@@ -292,6 +328,17 @@ Terminal::segmentIs(const Segment::PtrConst &s)
 	}
 }
 
+size_t
+Path::locationIndex(const Location::PtrConst &location) const
+{
+	for (vector<Part>::const_iterator itr = path_.begin(); itr != path_.end(); ++itr) {
+		if (itr->type == segment()) continue;
+		if (itr->loc->name() == location->name())
+			return itr - path_.begin();
+	}
+	throw Fwk::RangeException("value=range()");
+}
+
 Path::Membership
 Path::locationMembershipStatus(const Location::PtrConst &location) const
 {
@@ -409,6 +456,21 @@ Path::stringValue() const
 	output << "\n";
 	return output.str();
 }
+
+Shipment::Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p): 
+	Fwk::NamedInterface(Shipment::shipmentName(s, d)),
+	src_(s),
+	dest_(d),
+	load_(p)
+	{
+		path_ = networkInstance()->connectivity()->shipmentPath(name());
+		if (!path_) {
+			cerr <<__FILE__<<":"<<__LINE__<< ": ShipmentShipment() path not possible" << endl;
+			throw Fwk::EntityNotFoundException("shipment path does not exist");
+		}
+	}
+
+
 
 void
 Connectivity::constraintsActiveDel()
@@ -637,13 +699,6 @@ Network::location(const Fwk::String &name) {
 	}
 	
 	return found->second;
-}
-
-map<string, Path::Ptr>
-Network::preprocessRoutes()
-{
-	//TODO
-	return map<string, Path::Ptr>();
 }
 
 void

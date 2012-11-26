@@ -306,13 +306,7 @@ public:
 	U32 notifiees() const { return notifiee_.members(); }
 
 protected:
-	Segment(Fwk::String name, Mode mode):
-		Fwk::NamedInterface(name),
-		segmentReactor_(SegmentReactor::SegmentReactorNew(this)),
-		mode_(mode),
-		exp_support_(Segment::expediteNotSupported()),
-		capacity_(ShipmentCount(10))
-		{}
+	Segment(Fwk::String name, Mode mode);
 
 	void newNotifiee(Segment::NotifieeConst *n) const {
 		Segment* me = const_cast<Segment*>(this);
@@ -859,6 +853,13 @@ class Shipment : public Fwk::NamedInterface {
 public:
 	typedef Fwk::Ptr<Shipment> Ptr;
 	typedef Fwk::Ptr<Shipment const> PtrConst;
+
+	static string shipmentName(const Customer::Ptr &source, const Customer::Ptr &destination)
+	{
+		stringstream stream;
+		stream << source->name() << ":" << destination->name();
+		return stream.str(); 
+	}
 	
 	Customer::Ptr source() { return src_; }
 	void sourceIs(Customer::Ptr s) { src_ = s; }
@@ -873,13 +874,8 @@ public:
 	void pathIs(const Path::PtrConst &path) { path_ = path; }
 
 protected:
-	Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p): 
-		Fwk::NamedInterface(string("(").append(s->name()).append(":").append(d->name()).append(")")),
-		src_(s),
-		dest_(d),
-		load_(p)
-		{}
-
+	Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p);
+	
 	Customer::Ptr src_;
 	Customer::Ptr dest_;
 	PackageCount load_;
@@ -999,6 +995,8 @@ public:
 		return found->second;
 	}
 
+	Fleet::PtrConst fleet() const { return fleet_; }
+	Connectivity::PtrConst connectivity() const { return connectivity_; }
 
 	void expediteSupportIs(Fwk::String name, Segment::ExpediteSupport supported);
 	Segment::Ptr segmentNew(Fwk::String name, Segment::Mode mode);
@@ -1124,6 +1122,9 @@ protected:
 	}
 
 	void locationSegmentsDel(Location::Ptr m);
+
+	//singleton instance
+	static Network::Ptr networkInstance_;
 
 	NotifieeList notifiee_;
 	map<Fwk::String, Location::Ptr> locations_;
