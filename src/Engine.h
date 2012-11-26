@@ -895,6 +895,13 @@ public:
 	static inline Constraint hours() { return constrainHours_; }
 	static inline Constraint expedited() { return constrainExpedited_; }
 
+	enum RoutingMethod {
+		dijkstra_,
+		bfs_
+	};
+	static inline RoutingMethod dijkstra() { return dijkstra_; }
+	static inline RoutingMethod bfs() { return bfs_; }
+
 	void constraintsActiveIs(int mask);
 	void constraintsActiveDel();
 	int constraintsActive() const { return mask_; }
@@ -946,16 +953,38 @@ public:
 		return m;
 	}
 
+	RoutingMethod routingMethod(){
+		return routing_method_;
+	}
+	void routingMethodIs(RoutingMethod rm){
+		routing_method_ = rm;
+	}
+	Path::Ptr shipmentPath(const string &s){
+		//return either dijkstra or bfs route. 
+		//look up that string in the map and return the path accordingly!
+
+		//if path not found, (using map.find = map::end)
+		return Path::Ptr();
+	}
+
 protected:	
 	Connectivity(Fwk::String name):
 		Fwk::NamedInterface(name),
 		expedited_(Segment::expediteNotSupported()),
-		mask_(0)
-		{}
+		mask_(0),
+		routing_method_(dijkstra())
+		{
+			routes_dijkstra_ = routes(dijkstra());
+			routes_bfs_ = routes(bfs());
+		}
 
 	bool isValidExplorePath(Path::Ptr path) const;
 	bool isValidExplorePathNotExpedited(Path::Ptr one, Path::Ptr two) const;
 	vector<string> stringifyPaths(SearchPattern pattern, vector<Path::Ptr> &completedPaths) const;
+	map<string, Path::Ptr> routes(RoutingMethod rm);
+	Path::Ptr DijkstraShortestPath(Location::Ptr &startLoc, Location::Ptr &endLoc);
+	Path::Ptr BFSShortestPath(Location::Ptr &startLoc, Location::Ptr &endLoc);
+
 
 	Segment::ExpediteSupport expedited_;
 	int mask_;
@@ -965,6 +994,10 @@ protected:
 	Mile distance_;
 	Dollars cost_;
 	Hours hours_;
+	RoutingMethod routing_method_;
+	map<string, Path::Ptr> routes_dijkstra_;
+	map<string, Path::Ptr> routes_bfs_;
+	//TODO: ADD OTHER PREPROCESS MAPS HERE
 	
 };
 

@@ -433,8 +433,14 @@ public:
 
     // Instance method
     void attributeIs(const string& name, const string& v) {
-        cerr <<"tried to set conn attributes."<< endl;
-//        throw Fwk::PermissionException(name);
+        if (name == "routing algorithm"){
+            if (v == "dijkstra") connectivity_->routingMethodIs(Connectivity::dijkstra());
+            if (v == "BFS") connectivity_ -> routingMethodIs(Connectivity::bfs());
+        }
+        else{
+            cerr <<"tried to set conn attribute '" << name << "' to '" << v <<"'"<< endl;
+            throw Fwk::AttributeNotSupportedException(name);
+        }
     }
 
 private:

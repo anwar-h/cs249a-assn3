@@ -628,6 +628,101 @@ Connectivity::stringifyPaths(SearchPattern pattern, vector<Path::Ptr> &completed
 	return completed;
 }
 
+class PathDistanceComp {
+public:
+	PathDistanceComp() {}
+
+	bool operator()(Path::Ptr a, Path::Ptr b) const {
+		return (a->distance() > b->distance());
+	}
+};
+
+Path::Ptr Connectivity::BFSShortestPath(Location::Ptr &startLoc, Location::Ptr &endLoc){
+	typedef Location::SegmentIteratorConst SegmentIteratorConst;
+
+	Path::Ptr startPath = Path::PathNew(fleet());
+	startPath->endLocationIs(startLoc);
+
+	
+	queue<Path::Ptr> pathQueue;
+	pathQueue.push(startPath);
+
+
+	while(pathQueue.size() > 0) {
+		Path::Ptr curr = pathQueue.front();
+		Location::PtrConst jumpingOffLocation = curr->end();
+		pathQueue.pop();
+
+		SegmentIteratorConst 	
+			beginSeg = jumpingOffLocation->segmentsIteratorConstBegin(),
+			endSeg = jumpingOffLocation->segmentsIteratorConstEnd();
+
+		for(SegmentIteratorConst it = beginSeg; it != endSeg; ++it) {
+			Segment::PtrConst nextSegment = (*it);
+			if (!nextSegment->returnSegment()) continue;
+			Location::PtrConst nextLocation = nextSegment->returnSegment()->source();
+
+			if (curr->locationMembershipStatus(nextLocation) == Path::notMember()) {
+				Path::Ptr copy = copyPath(curr, fleet(), nextLocation, nextSegment);
+				if (copy->end()->name() == endLoc->name()) {
+					return copy;
+				}
+				//don't push onto the queue if it's not a customer
+				else if (nextLocation->locationType() != Location::customer()) pathQueue.push(copy);
+			}
+		}
+	}
+	return Path::Ptr();
+}
+
+Path::Ptr Connectivity::DijkstraShortestPath(Location::Ptr &startLoc, Location::Ptr &endLoc){
+	typedef Location::SegmentIteratorConst SegmentIteratorConst;
+
+	Path::Ptr startPath = Path::PathNew(fleet());
+	startPath->endLocationIs(startLoc);
+
+	priority_queue<Path::Ptr, vector<Path::Ptr>, PathDistanceComp> pathQueue;
+	pathQueue.push(startPath);
+
+
+	while(pathQueue.size() > 0) {
+		Path::Ptr curr = pathQueue.top();
+		Location::PtrConst jumpingOffLocation = curr->end();
+		pathQueue.pop();
+
+		SegmentIteratorConst 	
+			beginSeg = jumpingOffLocation->segmentsIteratorConstBegin(),
+			endSeg = jumpingOffLocation->segmentsIteratorConstEnd();
+
+		for(SegmentIteratorConst it = beginSeg; it != endSeg; ++it) {
+			Segment::PtrConst nextSegment = (*it);
+			if (!nextSegment->returnSegment()) continue;
+			Location::PtrConst nextLocation = nextSegment->returnSegment()->source();
+
+			if (curr->locationMembershipStatus(nextLocation) == Path::notMember()) {
+				Path::Ptr copy = copyPath(curr, fleet(), nextLocation, nextSegment);
+				if (copy->end()->name() == endLoc->name()) {
+					return copy;
+				}
+				//don't push onto the queue if it's not a customer
+				else if (nextLocation->locationType() != Location::customer()) pathQueue.push(copy);
+			}
+		}
+	}
+	return Path::Ptr();
+}
+
+map<string, Path::Ptr> Connectivity::routes(RoutingMethod rm){
+	map<string, Path::Ptr> routeMap;
+	if (rm == dijkstra()){
+
+	}
+	else if (rm == bfs()){
+
+	}
+	return routeMap;
+}
+
 
 Location::Ptr
 Network::location(const Fwk::String &name) {
