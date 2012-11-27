@@ -81,7 +81,7 @@ public:
 
 protected:
     ManagerImpl():
-    	Manager("activityManager"),
+    	Manager(),
     	now_(0)
     	{}
 

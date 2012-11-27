@@ -64,7 +64,7 @@ namespace ActivityImpl {
 		    //if the next time is greater than the specified time, break
 		    //the loop
 		    if (nextToRun->nextTime() > t) {
-			break;
+				break;
 		    }
 		    
 		    //calculate amount of time to sleep

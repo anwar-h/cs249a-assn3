@@ -2,8 +2,11 @@
 #define __ACTIVITY_H__
 
 #include <string>
-#include "fwk/BaseNotifiee.h"
+
 #include "fwk/NamedInterface.h"
+#include "fwk/Ptr.h"
+#include "Notifiee.h"
+
 #include "Nominal.h"
 
 
@@ -16,25 +19,19 @@ public:
     {}
 };
 
-class Activity : public Fwk::NamedInterface {
+class Activity : public Fwk::PtrInterface<Activity> {
  public:
     typedef Fwk::Ptr<Activity> Ptr;
     
     /* Notifiee class for Activities */
-    class Notifiee : public virtual Fwk::NamedInterface::Notifiee {
+ class Notifiee : public Fwk::BaseNotifiee<Activity> {
     public:
-        typedef Fwk::Ptr<Notifiee> Ptr;
+	typedef Fwk::Ptr<Notifiee> Ptr;
 
-        Notifiee(Activity* act):
-            Fwk::NamedInterface::Notifiee(),
-            act_(act)
-            {}
+        Notifiee(Activity* act) : Fwk::BaseNotifiee<Activity>(act) {}
 
         virtual void onNextTime() {}
-        virtual void onStatus() {}
-
-    protected:
-        Activity *act_;
+	virtual void onStatus() {}
     };
 
     class Manager;
@@ -53,13 +50,19 @@ class Activity : public Fwk::NamedInterface {
 
     virtual void lastNotifieeIs(Notifiee* n) = 0;
 
+    virtual string name() const { return name_; }
+
 protected:
-    Activity(const string &name):
-        Fwk::NamedInterface(name)
-        {}
+    Activity(const string &name)
+        : name_(name)
+    {}
+
+private:
+    string name_;
+
 };
 
-class Activity::Manager : public Fwk::NamedInterface {
+class Activity::Manager : public Fwk::PtrInterface<Activity::Manager> {
 public:
     typedef Fwk::Ptr<Activity::Manager> Ptr;
 
@@ -75,10 +78,9 @@ public:
     virtual void nowIs(Time) = 0;
 
 
-protected:
-    Manager(const string &name):
-        Fwk::NamedInterface(name)
-        {}
+private:
+    /* Up to you */
+
 };
 
 extern Fwk::Ptr<Activity::Manager> activityManagerInstance();

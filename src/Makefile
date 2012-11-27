@@ -2,7 +2,7 @@ CXXFLAGS = -Wall -g
 
 REP_LAYER = Instance.o
 ENGINE_LAYER = Engine.o
-OBJECTS = $(REP_LAYER) $(ENGINE_LAYER) ActivityImpl.o
+OBJECTS = $(REP_LAYER) $(ENGINE_LAYER) ActivityReactor.o ActivityImpl.o
 SIDE_CODE = snippets.o
 
 ALL_OBJECTS = $(SIDE_CODE) $(OBJECTS) example.o example2.o client.o test1.o activity.o
@@ -34,20 +34,18 @@ clean:
 
 
 SUBDIRS = fwk/
-     
 .PHONY: subdirs $(SUBDIRS)
-  
 all: clean $(SUBDIRS) default
-     
 $(SUBDIRS):
 	$(MAKE) clean -C $@ && $(MAKE) -C $@
  
 
-Engine.o: Engine.h Engine.cpp
-Instance.o: Instance.cpp Instance.h $(REP_LIBS) Engine.o ActivityImpl.o
+Engine.o: Engine.h Engine.cpp ActivityReactor.o
+Instance.o: Instance.cpp Instance.h $(REP_LIBS) Engine.o ActivityReactor.o
 
 test1.o: test1.cpp $(OBJECTS)
 example.o: example.cpp $(REP_LAYER)
 example2.o: example2.cpp $(REP_LAYER)
 client.o: client.cpp $(REP_LAYER)
-ActivityImpl.o: ActivityImpl.h ActivityImpl.cpp Activity.h
+ActivityImpl.o: ActivityImpl.h ActivityImpl.cpp
+ActivityReactor.o: ActivityReactor.h ActivityReactor.cpp ActivityImpl.o

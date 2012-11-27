@@ -96,7 +96,13 @@ bool contains(const set<string>& s, const string& str) {
     return s.find(str) != s.end();
 }
 
-TEST(A2Test, testLocationAttributes) {
+class A2Test : public ::testing::Test {
+protected:
+
+};
+
+
+TEST_F(A2Test, testLocationAttributes) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -131,11 +137,10 @@ TEST(A2Test, testLocationAttributes) {
 
 }
 
-TEST(A2Test, testSegmentAttributes) {
+TEST_F(A2Test, testSegmentAttributes) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
-
     Ptr<Instance> seg1 = m->instanceNew("seg1", "Boat segment");
     Ptr<Instance> seg2 = m->instanceNew("seg2", "Boat segment");
     Ptr<Instance> seg3 = m->instanceNew("seg3", "Boat segment");
@@ -151,7 +156,7 @@ TEST(A2Test, testSegmentAttributes) {
     
 }
 
-TEST(A2Test, testStatsAttributes) {
+TEST_F(A2Test, testStatsAttributes) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -187,7 +192,7 @@ TEST(A2Test, testStatsAttributes) {
     EXPECT_EQ(stats->attribute("Boat terminal"), "1");
 }
 
-TEST(A2Test, testStatsAttributes2){
+TEST_F(A2Test, testStatsAttributes2){
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -238,7 +243,7 @@ TEST(A2Test, testStatsAttributes2){
     EXPECT_EQ(stats->attribute("Truck segment"), "1");
 }
 
-TEST(A2Test, testFleetAttributes) {
+TEST_F(A2Test, testFleetAttributes) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     
     // Test reading and writing all fleet attributes
@@ -269,7 +274,7 @@ TEST(A2Test, testFleetAttributes) {
     EXPECT_EQ(fleet->attribute("Truck, capacity"), "9");
 }
 
-TEST(A2Test, testConn1) {
+TEST_F(A2Test, testConn1) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -376,7 +381,7 @@ TEST(A2Test, testConn1) {
     ASSERT(contains(t, "4500.00 23.08 yes; a(5:20.00:5r) e(6:10.00:6r) d"));
 }
 
-TEST(A2Test, testConn2) {
+TEST_F(A2Test, testConn2) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -478,7 +483,7 @@ TEST(A2Test, testConn2) {
     ASSERT(tokenize(conn->attribute("connect e : b")).empty());
 }
 
-TEST(A2Test, testConn3) {
+TEST_F(A2Test, testConn3) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -523,7 +528,7 @@ TEST(A2Test, testConn3) {
     ASSERT(tokenize(conn->attribute("connect a : d")).empty());
 }
 
-TEST(A2Test, testExplore1) {
+TEST_F(A2Test, testExplore1) {
 
     // Simple network, arranged in a line
     Ptr<Instance::Manager> m = shippingInstanceManager();
@@ -569,7 +574,7 @@ TEST(A2Test, testExplore1) {
     ASSERT(contains(t, "1(s12:10.00:s21) 2(s23:20.00:s32) 3(s34:30.00:s43) 4"));
 }
 /*
-TEST(A2Test, testExplore2) {
+TEST_F(A2Test, testExplore2) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -610,7 +615,7 @@ TEST(A2Test, testExplore2) {
     ASSERT(contains(t, "1(s14:10.00:s41) 4"));
 }
 */
-TEST(A2Test, testExplore3) {
+TEST_F(A2Test, testExplore3) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -719,7 +724,7 @@ string paths = conn->attribute("explore a : cost 20");
     ASSERT(contains(t, "d(3r:1.00:3) b(1r:1.00:1) a(2:1.00:2r) c(6:1.00:6r) g"));
 }
 
-TEST(A2Test, testExploreNoFleet) {
+TEST_F(A2Test, testExploreNoFleet) {
 
     // Simple network, arranged in a line
     Ptr<Instance::Manager> m = shippingInstanceManager();
@@ -746,7 +751,7 @@ TEST(A2Test, testExploreNoFleet) {
 }
 
 
-TEST(A2Test, testSegmentCompatibility) {
+TEST_F(A2Test, testSegmentCompatibility) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -773,7 +778,7 @@ TEST(A2Test, testSegmentCompatibility) {
 }
 
 
-TEST(A2Test, testSingletons) {
+TEST_F(A2Test, testSingletons) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
 
     // Three valid options: exception, return nil, or return the
@@ -800,7 +805,7 @@ TEST(A2Test, testSingletons) {
     }
 }
 
-TEST(A2Test, testSegmentSourceChange) {
+TEST_F(A2Test, testSegmentSourceChange) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -823,7 +828,7 @@ TEST(A2Test, testSegmentSourceChange) {
     EXPECT_EQ(loc2->attribute("segment1"), "seg2");
 }
 
-TEST(A2Test, testDeleteLocation) {
+TEST_F(A2Test, testDeleteLocation) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -845,7 +850,7 @@ TEST(A2Test, testDeleteLocation) {
     ASSERT(!m->instance("seg5") || seg5->attribute("source") == "");
 }
 
-TEST(A2Test, testDeleteSegment) {
+TEST_F(A2Test, testDeleteSegment) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -873,7 +878,7 @@ TEST(A2Test, testDeleteSegment) {
     MAYBETHROW(EXPECT_EQ(loc->attribute("segment3"), ""));
 }
 
-TEST(A2Test, testErrorInvalidAttribute) {
+TEST_F(A2Test, testErrorInvalidAttribute) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -893,7 +898,7 @@ TEST(A2Test, testErrorInvalidAttribute) {
     MAYBETHROW(seg->attributeIs("expedite support", "yes"));
 }
 
-TEST(A2Test, testErrorInvalidValues) {
+TEST_F(A2Test, testErrorInvalidValues) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -925,7 +930,7 @@ TEST(A2Test, testErrorInvalidValues) {
     EXPECT_EQ(fleet->attribute("Boat, speed"), "10.00");
 }
 
-TEST(A2Test, testErrorExistingInstance) {
+TEST_F(A2Test, testErrorExistingInstance) {
     Ptr<Instance::Manager> m = shippingInstanceManager();
     Ptr<Instance> fleet = m->instanceNew("fleet", "Fleet");
     if(!fleet) fleet = m->instance("fleet");
@@ -946,7 +951,7 @@ TEST(A2Test, testErrorExistingInstance) {
     ASSERT(false);
 }
 
-TEST(A2Test, testStressTest) {
+TEST_F(A2Test, testStressTest) {
   Ptr<Instance::Manager> m = shippingInstanceManager();
   for (int i = 0; i < 100000; i++) {
 
@@ -973,27 +978,27 @@ void sigsegv(int signal) {
 
    signal(SIGSEGV, sigsegv);
 
-    TEST(testLocationAttributes, 1);
-    TEST(testSegmentAttributes, 1);
-    TEST(testStatsAttributes, 1);
-    TEST(testStatsAttributes2, 1);
-    TEST(testFleetAttributes, 1);
-    TEST(testConn1, 2);
-    TEST(testConn2, 2);
-    TEST(testConn3, 1);
-    TEST(testExplore1, 1);
-    TEST(testExplore2, 2);
-    TEST(testExplore3, 2);
-    TEST(testExploreNoFleet, 1);
-    TEST(testSegmentCompatibility, 1);
-    TEST(testSingletons, 1);
-    TEST(testSegmentSourceChange, 1);
-    TEST(testDeleteLocation, 1);
-    TEST(testDeleteSegment, 1);
-    TEST(testErrorInvalidAttribute, 1);
-    TEST(testErrorInvalidValues, 1);
-    TEST(testErrorExistingInstance, 1); 
-    TEST(testStressTest, 1);
+    TEST_F(testLocationAttributes, 1);
+    TEST_F(testSegmentAttributes, 1);
+    TEST_F(testStatsAttributes, 1);
+    TEST_F(testStatsAttributes2, 1);
+    TEST_F(testFleetAttributes, 1);
+    TEST_F(testConn1, 2);
+    TEST_F(testConn2, 2);
+    TEST_F(testConn3, 1);
+    TEST_F(testExplore1, 1);
+    TEST_F(testExplore2, 2);
+    TEST_F(testExplore3, 2);
+    TEST_F(testExploreNoFleet, 1);
+    TEST_F(testSegmentCompatibility, 1);
+    TEST_F(testSingletons, 1);
+    TEST_F(testSegmentSourceChange, 1);
+    TEST_F(testDeleteLocation, 1);
+    TEST_F(testDeleteSegment, 1);
+    TEST_F(testErrorInvalidAttribute, 1);
+    TEST_F(testErrorInvalidValues, 1);
+    TEST_F(testErrorExistingInstance, 1); 
+    TEST_F(testStressTest, 1);
 
     return 0;
 }

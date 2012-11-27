@@ -2,57 +2,55 @@
 #define __NOTIFIEE_H__
 
 #include <string>
-
-#include "PtrInterface.h"
-#include "Ptr.h"
+#include "fwk/NamedInterface.h"
+#include "fwk/Ptr.h"
 
 using namespace std;
 
 namespace Fwk {
 
- class RootNotifiee : public PtrInterface<RootNotifiee> {
+class ActivityRootNotifiee : public PtrInterface<ActivityRootNotifiee> {
 	/* Deliberately empty */
-    };
+};
 
-    template<typename Notifier>
-	class BaseNotifiee : public RootNotifiee {
-	
-    public:
-    BaseNotifiee(Notifier* n = NULL) : notifier_(n) {
-	    if (n != NULL) {
-		n->lastNotifieeIs(static_cast<typename Notifier::Notifiee*>(this));
+template<typename Notifier>
+class BaseNotifiee : public ActivityRootNotifiee {
+public:
+	BaseNotifiee(Notifier* n = NULL):
+		notifier_(n)
+		{
+	    	if (n != NULL) {
+				n->lastNotifieeIs(static_cast<typename Notifier::Notifiee*>(this));
+	    	}
+		}
+
+	~BaseNotifiee()
+	{
+	    if (notifier_ != Ptr<Notifier>()) {
+			notifier_->lastNotifieeIs(0);
 	    }
 	}
-	
-	~BaseNotifiee() {
-	    if (notifier_ != NULL) {
-		notifier_->lastNotifieeIs(0);
-	    }
-	}
-	
-	Ptr<Notifier> notifier() const {
-	    return notifier_;
-	}
-	
-	void notifierIs(Ptr<Notifier> n) {
+
+	Ptr<Notifier> notifier() const { return notifier_; }
+
+	void notifierIs(Ptr<Notifier> n)
+	{
 	    if (notifier_ != n) {
-		if (notifier_ != NULL) {
-		    notifier_->lastNotifieeIs(0);
-		}
-		notifier_ = n;
-		if (n != NULL) {
-		    n->lastNotifieeIs(
-				      static_cast<typename Notifier::Notifiee*>(this)
-				      );
-		}
+			if (notifier_ != Ptr<Notifier>()) {
+			    notifier_->lastNotifieeIs(0);
+			}
+			notifier_ = n;
+			if (n != Ptr<Notifier>()) {
+			    n->lastNotifieeIs(static_cast<typename Notifier::Notifiee*>(this));
+			}
 	    }
 	}
-	
-    private:
+
+private:
 	Ptr<Notifier> notifier_;
-	
-    };
+};
  
 } //end namespace Fwk   
+
 #endif
     
