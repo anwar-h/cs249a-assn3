@@ -973,16 +973,15 @@ public:
 	void fleetIs(const Fleet::PtrConst &f) { fleet_ = f; }
 	Fleet::PtrConst fleet() const { return fleet_; }
 
-	vector<string> paths(SearchPattern pattern) const;
-
-	RoutingMethod routingMethod() const{
+	RoutingMethod routingMethod() {
 		return routing_method_;
 	}
 	void routingMethodIs(RoutingMethod rm) {
 		routing_method_ = rm;
 	}
-	Path::PtrConst shipmentPath(const string &s) const{
-		map<string, Path::Ptr>::const_iterator it;
+<<<<<<< HEAD
+	Path::Ptr shipmentPath(const string &s){
+		map<string, Path::Ptr>::iterator it;
 		Path::Ptr p;
 
 		if(routingMethod() == bfs()){
@@ -1000,12 +999,22 @@ public:
 			} 
 		}
 		return Path::Ptr();
+=======
+
+	vector<string> paths(SearchPattern pattern) const;
+	Path::PtrConst shipmentPath(const string &s) const {
+		//return either dijkstra or bfs route. 
+		//look up that string in the map and return the path accordingly!
+
+		//if path not found, (using map.find = map::end)
+		return Path::PtrConst();
 	}
 
 	static Connectivity::Ptr ConnectivityNew(Fwk::String name) {
 		Ptr m = new Connectivity(name);
 		m->referencesDec(1);
 		return m;
+>>>>>>> master
 	}
 
 protected:	
@@ -1024,8 +1033,8 @@ protected:
 	bool isValidExplorePathNotExpedited(Path::Ptr one, Path::Ptr two) const;
 	vector<string> stringifyPaths(SearchPattern pattern, vector<Path::Ptr> &completedPaths) const;
 	map<string, Path::Ptr> routes(RoutingMethod rm);
-	Path::Ptr DijkstraShortestPath(Location::PtrConst &startLoc, Location::PtrConst &endLoc);
-	Path::Ptr BFSShortestPath(Location::PtrConst &startLoc, Location::PtrConst &endLoc);
+	Path::Ptr DijkstraShortestPath(Location::Ptr &startLoc, Location::Ptr &endLoc);
+	Path::Ptr BFSShortestPath(Location::Ptr &startLoc, Location::Ptr &endLoc);
 
 
 	Segment::ExpediteSupport expedited_;
@@ -1039,7 +1048,6 @@ protected:
 	RoutingMethod routing_method_;
 	map<string, Path::Ptr> routes_dijkstra_;
 	map<string, Path::Ptr> routes_bfs_;
-	//TODO: ADD OTHER PREPROCESS MAPS HERE
 	
 };
 
@@ -1056,13 +1064,6 @@ public:
 	typedef Fwk::Ptr<Network const> PtrConst;
 
 	Location::Ptr location(const Fwk::String &name);
-	vector<Location::PtrConst> locations() const {
-		vector<Location::PtrConst> locs;
-		for (map<string, Location::Ptr>::const_iterator itr = locations_.begin(); itr != locations_.end(); ++itr) {
-			locs.push_back(itr->second.ptr());
-		}
-		return locs;
-	}
 	Segment::Ptr segment(const Fwk::String &name) {
 		map<Fwk::String, Segment::Ptr>::iterator found = segments_.find(name);
 		if(found == segments_.end()) return Segment::Ptr();
@@ -1178,8 +1179,7 @@ public:
 protected:
 	Network(Fwk::String name):
 		Fwk::NamedInterface(name)
-		{
-		}
+		{}
 
 	void newNotifiee(Network::NotifieeConst *n) const {
 		Network* me = const_cast<Network*>(this);

@@ -697,7 +697,7 @@ public:
 	}
 };
 
-Path::Ptr Connectivity::BFSShortestPath(Location::Ptr &startLoc, Location::Ptr &endLoc){
+Path::Ptr Connectivity::BFSShortestPath(Location::PtrConst &startLoc, Location::PtrConst &endLoc){
 	typedef Location::SegmentIteratorConst SegmentIteratorConst;
 
 	Path::Ptr startPath = Path::PathNew(fleet());
@@ -735,7 +735,7 @@ Path::Ptr Connectivity::BFSShortestPath(Location::Ptr &startLoc, Location::Ptr &
 	return Path::Ptr();
 }
 
-Path::Ptr Connectivity::DijkstraShortestPath(Location::Ptr &startLoc, Location::Ptr &endLoc){
+Path::Ptr Connectivity::DijkstraShortestPath(Location::PtrConst &startLoc, Location::PtrConst &endLoc){
 	typedef Location::SegmentIteratorConst SegmentIteratorConst;
 
 	Path::Ptr startPath = Path::PathNew(fleet());
@@ -774,7 +774,7 @@ Path::Ptr Connectivity::DijkstraShortestPath(Location::Ptr &startLoc, Location::
 
 map<string, Path::Ptr> Connectivity::routes(RoutingMethod rm){
 	map<string, Path::Ptr> routeMap;
-	vector<Location::Ptr> locs = networkInstance()->locations_;
+	vector<Location::PtrConst> locs = networkInstance()->locations();
 
 	for(size_t i = 0; i < locs.size(); i++){
 		for(size_t j = 0; j < locs.size(); j++){
