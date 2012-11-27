@@ -1,8 +1,6 @@
 #include "ActivityReactor.h"
 
 void InjectActivityReactor::onStatus() {
-    ActivityImpl::ManagerImpl::Ptr managerImpl = Fwk::ptr_cast<ActivityImpl::ManagerImpl>(manager_);
-
     switch (activity_->status()) {
 	    case Activity::executing:
 			//I am executing now
@@ -25,8 +23,6 @@ void InjectActivityReactor::onStatus() {
 }
 
 void ForwardActivityReactor::onStatus() {
-    ActivityImpl::ManagerImpl::Ptr managerImpl = Fwk::ptr_cast<ActivityImpl::ManagerImpl>(manager_);
-
     switch (activity_->status()) {
 	    case Activity::executing:
 			//I am executing now
@@ -35,8 +31,8 @@ void ForwardActivityReactor::onStatus() {
 	
 	    case Activity::free:
 			//When done, automatically enqueue myself for next execution
-			activity_->nextTimeIs(Time(activity_->nextTime().value() + rate_));
-			activity_->statusIs(Activity::nextTimeScheduled);
+			//activity_->nextTimeIs(Time(activity_->nextTime().value()));
+			//activity_->statusIs(Activity::nextTimeScheduled);
 			break;
 
 	    case Activity::nextTimeScheduled:

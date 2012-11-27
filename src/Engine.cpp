@@ -7,8 +7,7 @@ Segment::Segment(Fwk::String name, Mode mode):
 	Fwk::NamedInterface(name),
 	segmentReactor_(SegmentReactor::SegmentReactorNew(this)),
 	mode_(mode),
-	exp_support_(Segment::expediteNotSupported()),
-	capacity_(10 * networkInstance()->fleet()->capacity(mode).value())
+	exp_support_(Segment::expediteNotSupported())
 	{}
 
 string
@@ -89,9 +88,11 @@ void
 Segment::arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
-	if (shipment->load() <= capacity()) {
+	PackageCount vehicalCapacity = networkInstance()->fleet()->capacity(mode());
+	VehicleCount numVehicles = capacity();
+	if (shipment->load() <= capacity().value() * vehicalCapacity.value()) {
 		// our capacity is decreased cause we are taking this shipment
-		capacityIs(PackageCount(capacity().value() - shipment->load().value()));
+		//capacityIs(PackageCount(capacity().value() - shipment->load().value()));
 
 		// add this shipment to our queue
 		shipmentQueue_.push(shipment);
@@ -782,6 +783,13 @@ map<string, Path::Ptr> Connectivity::routes(RoutingMethod rm){
 	return routeMap;
 }
 
+Network::Ptr networkInstance() {
+	if (!networkInstance_) {
+		networkInstance_ = Network::NetworkNew("network").ptr();
+	}
+	cout << "NETWORK INSTANCE IS " << networkInstance_ << endl;
+	return networkInstance_;
+}
 
 Location::Ptr
 Network::location(const Fwk::String &name) {
@@ -1022,7 +1030,7 @@ Network::fleetNew(Fwk::String name)
 {
 	// check to see if it already exists
 	if(fleet_) {
-		cerr << "Network::fleetNew() Fleet name " << fleet_->name() << " already in use!" << endl;
+		cerr << "Network::fleetNew() Fleet name '" << fleet_->name() << "' already in use!" << endl;
 		return fleet_;
 	}
 	// if not then create it and add to network
@@ -1047,7 +1055,7 @@ Network::statisticsNew(Fwk::String name)
 {
 	// check to see if it already exists
 	if(statistics_) {
-		cerr << "Network::statisticsNew() Statistics name " << statistics_->name() << " already in use!" << endl;
+		cerr << "Network::statisticsNew() Statistics name '" << statistics_->name() << "' already in use!" << endl;
 		return statistics_;
 	}
 	// if not then create it and add to network
@@ -1072,7 +1080,7 @@ Network::connectivityNew(Fwk::String name)
 {
 	// check to see if it already exists
 	if(connectivity_) {
-		cerr << "Network::connectivityNew() Connectivity name " << connectivity_->name() << " already in use!" << endl;
+		cerr << "Network::connectivityNew() Connectivity name '" << connectivity_->name() << "' already in use!" << endl;
 		return connectivity_;
 	}
 	// if not then create it and add to network

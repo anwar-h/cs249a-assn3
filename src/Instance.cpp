@@ -289,7 +289,7 @@ string SegmentRep::attribute(const string& name) {
         return s.stringValue();
     }
     else if (name == "Capacity"){
-        ShipmentCount c = segment_ -> capacity();
+        VehicleCount c = segment_ -> capacity();
         return c.stringValue();
     }
     
@@ -330,7 +330,7 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
     else if (name == "Capacity"){
         int c = atoi(v.c_str());
         if (c < 0) return;
-        ShipmentCount count = ShipmentCount(c);
+        VehicleCount count = VehicleCount(c);
         segment_->capacityIs(count);
 
     }
@@ -681,10 +681,8 @@ void FleetRep::attributeIs(const string& name, const string& v) {
 
 //---------------------MANAGER-----------------------------------------------
 
-ManagerImpl::ManagerImpl() : network_(networkInstance())
-{
-
-}
+ManagerImpl::ManagerImpl() : network_(Network::NetworkNew("network"))
+{}
 
 
 Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {

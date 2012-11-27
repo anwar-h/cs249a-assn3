@@ -140,6 +140,21 @@ public:
 	}
 };
 
+class VehicleCount : public Ordinal<VehicleCount, size_t> {
+public:
+	VehicleCount() : Ordinal<VehicleCount, size_t>(10) {
+		if(value_ < 0) throw Fwk::RangeException("value=range()");
+	}
+	VehicleCount(size_t n) : Ordinal<VehicleCount, size_t>(n) {
+		if(value_ < 0) throw Fwk::RangeException("value=range()");
+	}
+
+	string stringValue() const {
+		return NumberConverter<size_t>::toString(value_);
+	}
+};
+
+
 class Dollars : public Ordinal<Dollars, float> {
 public:
 	Dollars() : Ordinal<Dollars, float>(0.f) {
@@ -207,9 +222,9 @@ public:
 
 	void arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment);
 
-	PackageCount capacity() const { return capacity_; }
-	void capacityIs(PackageCount c){
-		capacity_ = c;
+	VehicleCount capacity() const { return capacity_; }
+	void capacityIs(VehicleCount vc){
+		capacity_ = vc;
 	}
 
 	ShipmentCount shipmentsReceived() const { return shipments_received_; }
@@ -326,7 +341,7 @@ protected:
 	Segment::Ptr return_segment_;
 	Difficulty difficulty_;
 	ExpediteSupport exp_support_;
-	PackageCount capacity_;
+	VehicleCount capacity_;
 	ShipmentCount shipments_received_;
 	ShipmentCount shipments_refused_;
 };
@@ -958,26 +973,26 @@ public:
 	void fleetIs(const Fleet::PtrConst &f) { fleet_ = f; }
 	Fleet::PtrConst fleet() const { return fleet_; }
 
+	RoutingMethod routingMethod() {
+		return routing_method_;
+	}
+	void routingMethodIs(RoutingMethod rm) {
+		routing_method_ = rm;
+	}
+
 	vector<string> paths(SearchPattern pattern) const;
+	Path::PtrConst shipmentPath(const string &s) const {
+		//return either dijkstra or bfs route. 
+		//look up that string in the map and return the path accordingly!
+
+		//if path not found, (using map.find = map::end)
+		return Path::PtrConst();
+	}
 
 	static Connectivity::Ptr ConnectivityNew(Fwk::String name) {
 		Ptr m = new Connectivity(name);
 		m->referencesDec(1);
 		return m;
-	}
-
-	RoutingMethod routingMethod(){
-		return routing_method_;
-	}
-	void routingMethodIs(RoutingMethod rm){
-		routing_method_ = rm;
-	}
-	Path::Ptr shipmentPath(const string &s){
-		//return either dijkstra or bfs route. 
-		//look up that string in the map and return the path accordingly!
-
-		//if path not found, (using map.find = map::end)
-		return Path::Ptr();
 	}
 
 protected:	
@@ -1016,6 +1031,11 @@ protected:
 
 class Statistics; // Forward declaration
 
+class Network;
+static Network* networkInstance_;
+//Gets the singleton instance of Network
+Fwk::Ptr<Network> networkInstance();
+
 class Network : public Fwk::NamedInterface {
 public:
 	typedef Fwk::Ptr<Network> Ptr;
@@ -1053,11 +1073,12 @@ public:
 	Connectivity::Ptr connectivityNew(Fwk::String name);
 	Connectivity::Ptr connectivityDel(Fwk::String name);
 
-	static Network::Ptr networkInstance();
-
 	static Network::Ptr NetworkNew(Fwk::String name) {
-		Ptr m = new Network(name);
+		Ptr m = new Network(name);		
 		m->referencesDec(1);
+		//cout << "NETWORK CONSTRUCTOR IS " << m.ptr() << endl;
+		networkInstance_ = m.ptr();
+		//networkInstance();
 		return m;
 	}
 
@@ -1156,9 +1177,6 @@ protected:
 
 	void locationSegmentsDel(Location::Ptr m);
 
-	//singleton instance
-	static Network::Ptr networkInstance_;
-
 	NotifieeList notifiee_;
 	map<Fwk::String, Location::Ptr> locations_;
 	map<Fwk::String, Segment::Ptr> segments_;
@@ -1167,16 +1185,6 @@ protected:
 	Connectivity::Ptr connectivity_;
 };
 
-//Definition of static member
-Network::Ptr Network::networkInstance_ = Network::Ptr();
-
-//Gets the singleton instance of Network
-Network::Ptr Network::networkInstance() {
-	if (!networkInstance_) {
-		networkInstance_ = Network::NetworkNew("network");
-	}
-	return networkInstance_;
-}
 
 class Statistics : public Network::Notifiee {
 public:
@@ -1253,10 +1261,7 @@ protected:
 	size_t numExpeditedSegments_;
 };
 
-} /* end namespace */
 
-Shipping::Network::Ptr networkInstance() {
-    return Shipping::Network::networkInstance();
-}
+} /* end namespace */
 
 #endif
