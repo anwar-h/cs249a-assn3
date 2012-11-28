@@ -1,7 +1,14 @@
 #include "Engine.h"
 
 namespace ActivityImpl {
+	//Shipping::networkInstance()
     void ManagerImpl::nowIs(Time t) {
+    	static bool beenHere = false;
+
+    	if (!beenHere) {
+    		beenHere = true;
+    		// preprocess code here
+    	}
 		//find the most recent activites to run and run them in order
 		while (!scheduledActivities_.empty()) {
 		    
