@@ -21,6 +21,8 @@ old-Makefile
 client
 example
 example2
+experiment
+verification
 test1
 snippets
 src/unit-test/UnitTest
