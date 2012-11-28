@@ -774,7 +774,7 @@ public:
 	}
 };
 
-Path::Ptr Connectivity::BFSShortestPath(Location::Ptr &startLoc, Location::Ptr &endLoc){
+Path::Ptr Connectivity::BFSShortestPath(Location::PtrConst &startLoc, Location::PtrConst &endLoc){
 	typedef Location::SegmentIteratorConst SegmentIteratorConst;
 
 	Path::Ptr startPath = Path::PathNew(fleet());
@@ -812,7 +812,7 @@ Path::Ptr Connectivity::BFSShortestPath(Location::Ptr &startLoc, Location::Ptr &
 	return Path::Ptr();
 }
 
-Path::Ptr Connectivity::DijkstraShortestPath(Location::Ptr &startLoc, Location::Ptr &endLoc){
+Path::Ptr Connectivity::DijkstraShortestPath(Location::PtrConst &startLoc, Location::PtrConst &endLoc){
 	typedef Location::SegmentIteratorConst SegmentIteratorConst;
 
 	Path::Ptr startPath = Path::PathNew(fleet());
@@ -851,11 +851,22 @@ Path::Ptr Connectivity::DijkstraShortestPath(Location::Ptr &startLoc, Location::
 
 map<string, Path::Ptr> Connectivity::routes(RoutingMethod rm){
 	map<string, Path::Ptr> routeMap;
-	if (rm == dijkstra()){
+	vector<Location::PtrConst> locs = networkInstance()->locations();
 
-	}
-	else if (rm == bfs()){
+	for(size_t i = 0; i < locs.size(); i++){
+		for(size_t j = 0; j < locs.size(); j++){
+			if (i == j) continue;
 
+			Path::Ptr shortPath;
+			if (rm == dijkstra()) shortPath = DijkstraShortestPath(locs[i], locs[j]);
+			else if (rm == bfs()) shortPath = BFSShortestPath(locs[i], locs[j]);
+
+			if (shortPath){
+				stringstream key;
+				key << locs[i]->name() << ":" << locs[j]->name(); 
+				routeMap[key.str()] = shortPath;
+			}
+		}
 	}
 	return routeMap;
 }
@@ -867,6 +878,7 @@ Network::Ptr networkInstance() {
 	cout << "NETWORK INSTANCE IS " << networkInstance_ << endl;
 	return networkInstance_;
 }
+
 
 Location::Ptr
 Network::location(const Fwk::String &name) {

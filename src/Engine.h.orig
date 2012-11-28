@@ -22,6 +22,8 @@
 #include <queue>
 #include <typeinfo>
 
+
+
 namespace Shipping {
 
 using namespace std;
@@ -218,7 +220,7 @@ public:
 		exp_support_ = es;
 	}
 
-	void arrivingShipmentIs(Fwk::Ptr<Shipment> &shipment);
+	void arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment);
 
 	VehicleCount capacity() const { return capacity_; }
 	void capacityIs(VehicleCount vc){
@@ -226,7 +228,6 @@ public:
 	}
 
 	ShipmentCount shipmentsReceived() const { return shipments_received_; }
-	void shipmentsReceivedIs(ShipmentCount c) { shipments_received_ = c; }
 	ShipmentCount shipmentsRefused() const { return shipments_refused_; }
 
 	static Segment::Ptr SegmentNew(Fwk::String name, Mode mode) {
@@ -247,7 +248,7 @@ public:
 		 ~NotifieeConst();
 
 		virtual void notifierIs(const Segment::PtrConst& _notifier);
-		virtual void onShipmentArrival(Fwk::Ptr<Shipment> &shipment) {}
+		virtual void onShipmentArrival(const Fwk::Ptr<Shipment> &shipment) {}
 
 		void lrNextIs(NotifieeConst * _lrNext) {
 		 lrNext_ = _lrNext;
@@ -295,7 +296,7 @@ public:
 		typedef Fwk::Ptr<SegmentReactor> Ptr;
 		typedef Fwk::Ptr<SegmentReactor const> PtrConst;
 
-		void onShipmentArrival(Fwk::Ptr<Shipment> &shipment);
+		void onShipmentArrival(const Fwk::Ptr<Shipment> &shipment);
 
 		static SegmentReactor::Ptr SegmentReactorNew(const Segment::Ptr &notifier) {
 			Ptr m = new SegmentReactor(notifier);
@@ -377,7 +378,7 @@ public:
 		else cerr << "Engine.h:"<<__LINE__<<": Location::segmentDel() name does not exist." << endl;
 	}
 
-	void arrivingShipmentIs(Fwk::Ptr<Shipment> &shipment);
+	void arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment);
 
 	typedef vector<Segment::PtrConst>::iterator SegmentIterator;
 	typedef vector<Segment::PtrConst>::const_iterator SegmentIteratorConst;
@@ -412,7 +413,7 @@ public:
 	   	~NotifieeConst();
 
 	  	virtual void notifierIs(const Location::PtrConst& _notifier);
-		virtual void onShipmentArrival(Fwk::Ptr<Shipment> &shipment) {}
+		virtual void onShipmentArrival(const Fwk::Ptr<Shipment> &shipment) {}
 
 		void lrNextIs(NotifieeConst * _lrNext) {
 			lrNext_ = _lrNext;
@@ -460,7 +461,7 @@ public:
 		typedef Fwk::Ptr<LocationReactor> Ptr;
 		typedef Fwk::Ptr<LocationReactor const> PtrConst;
 
-		void onShipmentArrival(Fwk::Ptr<Shipment> &shipment);
+		void onShipmentArrival(const Fwk::Ptr<Shipment> &shipment);
 
 		static LocationReactor::Ptr LocationReactorNew(const Location::Ptr &notifier) {
 			Ptr m = new LocationReactor(notifier);
@@ -470,13 +471,10 @@ public:
 
 	protected:
 		LocationReactor(const Location::Ptr &notifier):
-			Location::Notifiee(),
-			activityManager_(activityManagerInstance())
+			Location::Notifiee()
 			{
 				notifierIs(notifier);
 			}
-
-		Activity::Manager::Ptr activityManager_;
 	};
 
 
@@ -518,39 +516,6 @@ protected:
 	LocationReactor::Ptr locationReactor_;
 };
 
-class RetryActivityReactor : public Activity::Notifiee {
-public:
-	void onStatus();
-
-	static const double MAX_WAIT = 24.0;
-	static const double WAIT_MULTIPLE = 2.0;
-
-	RetryActivityReactor(Fwk::Ptr<Activity::Manager> manager,
-				Activity *activity, Shipment *shipment,
-				Segment *segment):
-		Notifiee(activity),
-		successfullyForwardedShipment_(false),
-		totalTimeWaiting_(0.0),
-		wait_(0.1),
-		shipment_(shipment),
-		segment_(segment),
-		activity_(activity),
-		manager_(manager)
-		{}
-
-	double wait() { return wait_; }
-
-protected:
-	bool successfullyForwardedShipment_;
-	double totalTimeWaiting_;
-	double wait_;
-	Fwk::Ptr<Shipment> shipment_;
-	Fwk::Ptr<Segment> segment_;
-	Activity::Ptr activity_;
-	Fwk::Ptr<Activity::Manager> manager_;
-};
-
-
 class Customer : public Location {
 public:
 	typedef Fwk::Ptr<Customer> Ptr;
@@ -571,17 +536,11 @@ public:
 	}
 	void destinationIs(Customer::Ptr c);
 	
-	ShipmentCount shipmentsReceived() const {
+	ShipmentCount shipmentsReceived() const{
 		return shipments_received_;
 	}
-	void shipmentsReceivedIs(ShipmentCount c) {
-		shipments_received_ = c;
-	}
-	void totalLatencyInc(Hours l) {
-		total_latency_ = Hours(total_latency_.value() + l.value());
-	}
 	Hours avgLatency() const{
-		return Hours(total_latency_.value() / shipments_received_.value());
+		return avg_latency_;
 	}
 	Dollars totalCost() const {
 		return total_cost_;
@@ -712,7 +671,7 @@ protected:
 	PackageCount shipment_size_;
 	Customer::Ptr destination_;
 	ShipmentCount shipments_received_;
-	Hours total_latency_;
+	Hours avg_latency_;
 	Dollars total_cost_;
 };
 
@@ -929,9 +888,6 @@ public:
 	Path::PtrConst path() const { return path_; }
 	void pathIs(const Path::PtrConst &path) { path_ = path; }
 
-	Hours latency() const { return latency_; }
-	void latencyInc(Hours l) { latency_ = Hours(latency_.value() + l.value()); }
-
 protected:
 	Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p);
 
@@ -939,7 +895,6 @@ protected:
 	Customer::Ptr dest_;
 	PackageCount load_;
 	Path::PtrConst path_;
-	Hours latency_;
 };
 
 
@@ -1018,16 +973,15 @@ public:
 	void fleetIs(const Fleet::PtrConst &f) { fleet_ = f; }
 	Fleet::PtrConst fleet() const { return fleet_; }
 
-	vector<string> paths(SearchPattern pattern) const;
-
-	RoutingMethod routingMethod() const{
+	RoutingMethod routingMethod() {
 		return routing_method_;
 	}
 	void routingMethodIs(RoutingMethod rm) {
 		routing_method_ = rm;
 	}
-	Path::PtrConst shipmentPath(const string &s) const{
-		map<string, Path::Ptr>::const_iterator it;
+<<<<<<< HEAD
+	Path::Ptr shipmentPath(const string &s){
+		map<string, Path::Ptr>::iterator it;
 		Path::Ptr p;
 
 		if(routingMethod() == bfs()){
@@ -1045,12 +999,22 @@ public:
 			} 
 		}
 		return Path::Ptr();
+=======
+
+	vector<string> paths(SearchPattern pattern) const;
+	Path::PtrConst shipmentPath(const string &s) const {
+		//return either dijkstra or bfs route. 
+		//look up that string in the map and return the path accordingly!
+
+		//if path not found, (using map.find = map::end)
+		return Path::PtrConst();
 	}
 
 	static Connectivity::Ptr ConnectivityNew(Fwk::String name) {
 		Ptr m = new Connectivity(name);
 		m->referencesDec(1);
 		return m;
+>>>>>>> master
 	}
 
 protected:	
@@ -1069,8 +1033,8 @@ protected:
 	bool isValidExplorePathNotExpedited(Path::Ptr one, Path::Ptr two) const;
 	vector<string> stringifyPaths(SearchPattern pattern, vector<Path::Ptr> &completedPaths) const;
 	map<string, Path::Ptr> routes(RoutingMethod rm);
-	Path::Ptr DijkstraShortestPath(Location::PtrConst &startLoc, Location::PtrConst &endLoc);
-	Path::Ptr BFSShortestPath(Location::PtrConst &startLoc, Location::PtrConst &endLoc);
+	Path::Ptr DijkstraShortestPath(Location::Ptr &startLoc, Location::Ptr &endLoc);
+	Path::Ptr BFSShortestPath(Location::Ptr &startLoc, Location::Ptr &endLoc);
 
 
 	Segment::ExpediteSupport expedited_;
@@ -1084,7 +1048,6 @@ protected:
 	RoutingMethod routing_method_;
 	map<string, Path::Ptr> routes_dijkstra_;
 	map<string, Path::Ptr> routes_bfs_;
-	//TODO: ADD OTHER PREPROCESS MAPS HERE
 	
 };
 
@@ -1101,13 +1064,6 @@ public:
 	typedef Fwk::Ptr<Network const> PtrConst;
 
 	Location::Ptr location(const Fwk::String &name);
-	vector<Location::PtrConst> locations() const {
-		vector<Location::PtrConst> locs;
-		for (map<string, Location::Ptr>::const_iterator itr = locations_.begin(); itr != locations_.end(); ++itr) {
-			locs.push_back(itr->second.ptr());
-		}
-		return locs;
-	}
 	Segment::Ptr segment(const Fwk::String &name) {
 		map<Fwk::String, Segment::Ptr>::iterator found = segments_.find(name);
 		if(found == segments_.end()) return Segment::Ptr();
@@ -1223,8 +1179,7 @@ public:
 protected:
 	Network(Fwk::String name):
 		Fwk::NamedInterface(name)
-		{
-		}
+		{}
 
 	void newNotifiee(Network::NotifieeConst *n) const {
 		Network* me = const_cast<Network*>(this);
@@ -1328,7 +1283,7 @@ protected:
 	size_t numExpeditedSegments_;
 };
 
-} /* end namespace */
 
+} /* end namespace */
 
 #endif
