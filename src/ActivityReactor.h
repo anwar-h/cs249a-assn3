@@ -36,4 +36,5 @@ protected:
 	Fwk::Ptr<Activity::Manager> manager_;
 };
 
+
 #endif

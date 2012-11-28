@@ -54,37 +54,5 @@ namespace ActivityImpl {
 		scheduledActivities_.push(activity);
     }
 
-    void ManagerImpl::nowIs(Time t) {
-		//find the most recent activites to run and run them in order
-		while (!scheduledActivities_.empty()) {
-		    
-		    //figure out the next activity to run
-		    Activity::Ptr nextToRun = scheduledActivities_.top();
-
-		    //if the next time is greater than the specified time, break
-		    //the loop
-		    if (nextToRun->nextTime() > t) {
-				break;
-		    }
-		    
-		    //calculate amount of time to sleep
-		    Time diff = Time(nextToRun->nextTime().value() - now_.value());
-		    
-		    //sleep 100ms (100,000 microseconds) for every unit of time
-		    usleep(( ((int)diff.value()) * 100000));
-		    
-		    now_ = nextToRun->nextTime();
-
-		    //run the minimum time activity and remove it from the queue
-		    scheduledActivities_.pop();
-
-		    nextToRun->statusIs(Activity::executing);
-		    nextToRun->statusIs(Activity::free);
-
-		}
-
-		//syncrhonize the time
-		now_ = t;
-    }
 
 } //end namespace ActivityImpl

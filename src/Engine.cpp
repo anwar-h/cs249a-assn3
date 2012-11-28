@@ -1,5 +1,39 @@
 #include "Engine.h"
 
+namespace ActivityImpl {
+    void ManagerImpl::nowIs(Time t) {
+		//find the most recent activites to run and run them in order
+		while (!scheduledActivities_.empty()) {
+		    
+		    //figure out the next activity to run
+		    Activity::Ptr nextToRun = scheduledActivities_.top();
+
+		    //if the next time is greater than the specified time, break
+		    //the loop
+		    if (nextToRun->nextTime() > t) {
+				break;
+		    }
+		    
+		    //calculate amount of time to sleep
+		    Time diff = Time(nextToRun->nextTime().value() - now_.value());
+		    
+		    //sleep 100ms (100,000 microseconds) for every unit of time
+		    usleep(( ((int)diff.value()) * 100000));
+		    
+		    now_ = nextToRun->nextTime();
+
+		    //run the minimum time activity and remove it from the queue
+		    scheduledActivities_.pop();
+
+		    nextToRun->statusIs(Activity::executing);
+		    nextToRun->statusIs(Activity::free);
+
+		}
+
+		//syncrhonize the time
+		now_ = t;
+    }
+}
 
 namespace Shipping {
 
@@ -85,7 +119,7 @@ Segment::NotifieeConst::~NotifieeConst() {
 }
 
 void
-Segment::arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment)
+Segment::arrivingShipmentIs(Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
 	PackageCount vehicalCapacity = networkInstance()->fleet()->capacity(mode());
@@ -110,13 +144,14 @@ Segment::arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment)
 		}
 	}
 	else {
-		// send it back from whence it came
+		// throw an exception
+		throw Fwk::RangeException("segment cannot accept shipment"); 
 	}
 }
 
 
 void
-Segment::SegmentReactor::onShipmentArrival(const Fwk::Ptr<Shipment> &shipment)
+Segment::SegmentReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
 	Activity::Ptr activity = activityManager_->activityNew("Forwarding");
@@ -124,12 +159,13 @@ Segment::SegmentReactor::onShipmentArrival(const Fwk::Ptr<Shipment> &shipment)
 	Segment::Ptr seg = notifier();
 	Fleet::PtrConst fleet = networkInstance()->fleet();
 	Time timeToTraverse = Time(seg->length().value() / fleet->speed(seg->mode()).value());
+	shipment->latencyInc(Hours(seg->length().value() / fleet->speed(seg->mode()).value()));
 	activity->nextTimeIs(activityManager_->now().value() + timeToTraverse.value());
 	activity->statusIs(Activity::nextTimeScheduled);
 }
 
 void
-Location::arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment)
+Location::arrivingShipmentIs(Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
 	// tell all the notifiees
@@ -170,31 +206,72 @@ Location::NotifieeConst::~NotifieeConst() {
 }
 
 void
-Location::LocationReactor::onShipmentArrival(const Fwk::Ptr<Shipment> &shipment)
+Location::LocationReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
 	if (notifier()->locationType() == customer() &&
 		shipment->dest()->name() == notifier()->name()) {
 		//at destination
-
+		Customer *thisPtr = dynamic_cast<Customer*>(notifier().ptr());
+		thisPtr->shipmentsReceivedIs(ShipmentCount(thisPtr->shipmentsReceived().value() + 1));
+		thisPtr->totalLatencyInc(shipment->latency());
 		//record statistics
 	}
 	else {
+		Segment::Ptr segment;
 		try {
 			size_t thisLocationIndex = shipment->path()->locationIndex(notifier());
 			if (thisLocationIndex + 1 < shipment->path()->numParts()) {
-				Segment::PtrConst s = shipment->path()->part(thisLocationIndex + 1).seg;
-				Segment::Ptr segment = const_cast<Segment*>(s.ptr());
+				Segment::PtrConst seg = shipment->path()->part(thisLocationIndex + 1).seg;
+				segment = const_cast<Segment*>(seg.ptr());
 				segment->arrivingShipmentIs(shipment);
 			}
 			else cerr << __FILE__":"<<__LINE__<<": LocationReactor::onShipmentArival() next segment index out of bounds." << endl;
 		} catch(...) {
-
+			// create retry activity
+			Activity::Ptr activity = activityManager_->activityNew("Retry");
+			activity->lastNotifieeIs( new RetryActivityReactor(activityManager_, activity.ptr(), shipment.ptr(), segment.ptr()) );
+			activity->nextTimeIs(activityManager_->now().value() + dynamic_cast<RetryActivityReactor*>(activity->notifiee().ptr())->wait());
+			activity->statusIs(Activity::nextTimeScheduled);
 		}
-
-		// call Segment::arrivingShipmentIs() for the next part of path
 	}
 }
+
+void RetryActivityReactor::onStatus() {
+    switch (activity_->status()) {
+	    case Activity::executing:
+	    {
+			//Retry forwarding the shipment
+	    	try {
+	    		segment_->arrivingShipmentIs(shipment_);
+
+	    		// If we get to this line, we know this was successful
+	    		// otherwise we would throw an exception.
+	    		successfullyForwardedShipment_ = true;
+	    	} catch(...) { /* we will reschedule ourselves */ }
+			break;
+		}
+	
+	    case Activity::free:
+	    {
+			if (!successfullyForwardedShipment_ && totalTimeWaiting_ <= MAX_WAIT) {
+				activity_->nextTimeIs(Time(activity_->nextTime().value() + wait_));
+				totalTimeWaiting_ += wait_;
+				wait_ *= WAIT_MULTIPLE;
+				activity_->statusIs(Activity::nextTimeScheduled);
+			}
+			break;
+		}
+
+	    case Activity::nextTimeScheduled:
+			//add myself to be scheduled
+			manager_->lastActivityIs(activity_);
+			break;
+
+	    default: break;
+    }
+}
+
 
 void
 Customer::transferRateIs(ShipmentCount tr){
