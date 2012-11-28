@@ -22,8 +22,6 @@
 #include <queue>
 #include <typeinfo>
 
-
-
 namespace Shipping {
 
 using namespace std;
@@ -220,7 +218,7 @@ public:
 		exp_support_ = es;
 	}
 
-	void arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment);
+	void arrivingShipmentIs(Fwk::Ptr<Shipment> &shipment);
 
 	VehicleCount capacity() const { return capacity_; }
 	void capacityIs(VehicleCount vc){
@@ -228,6 +226,7 @@ public:
 	}
 
 	ShipmentCount shipmentsReceived() const { return shipments_received_; }
+	void shipmentsReceivedIs(ShipmentCount c) { shipments_received_ = c; }
 	ShipmentCount shipmentsRefused() const { return shipments_refused_; }
 
 	static Segment::Ptr SegmentNew(Fwk::String name, Mode mode) {
@@ -248,7 +247,7 @@ public:
 		 ~NotifieeConst();
 
 		virtual void notifierIs(const Segment::PtrConst& _notifier);
-		virtual void onShipmentArrival(const Fwk::Ptr<Shipment> &shipment) {}
+		virtual void onShipmentArrival(Fwk::Ptr<Shipment> &shipment) {}
 
 		void lrNextIs(NotifieeConst * _lrNext) {
 		 lrNext_ = _lrNext;
@@ -296,7 +295,7 @@ public:
 		typedef Fwk::Ptr<SegmentReactor> Ptr;
 		typedef Fwk::Ptr<SegmentReactor const> PtrConst;
 
-		void onShipmentArrival(const Fwk::Ptr<Shipment> &shipment);
+		void onShipmentArrival(Fwk::Ptr<Shipment> &shipment);
 
 		static SegmentReactor::Ptr SegmentReactorNew(const Segment::Ptr &notifier) {
 			Ptr m = new SegmentReactor(notifier);
@@ -378,7 +377,7 @@ public:
 		else cerr << "Engine.h:"<<__LINE__<<": Location::segmentDel() name does not exist." << endl;
 	}
 
-	void arrivingShipmentIs(const Fwk::Ptr<Shipment> &shipment);
+	void arrivingShipmentIs(Fwk::Ptr<Shipment> &shipment);
 
 	typedef vector<Segment::PtrConst>::iterator SegmentIterator;
 	typedef vector<Segment::PtrConst>::const_iterator SegmentIteratorConst;
@@ -413,7 +412,7 @@ public:
 	   	~NotifieeConst();
 
 	  	virtual void notifierIs(const Location::PtrConst& _notifier);
-		virtual void onShipmentArrival(const Fwk::Ptr<Shipment> &shipment) {}
+		virtual void onShipmentArrival(Fwk::Ptr<Shipment> &shipment) {}
 
 		void lrNextIs(NotifieeConst * _lrNext) {
 			lrNext_ = _lrNext;
@@ -461,7 +460,7 @@ public:
 		typedef Fwk::Ptr<LocationReactor> Ptr;
 		typedef Fwk::Ptr<LocationReactor const> PtrConst;
 
-		void onShipmentArrival(const Fwk::Ptr<Shipment> &shipment);
+		void onShipmentArrival(Fwk::Ptr<Shipment> &shipment);
 
 		static LocationReactor::Ptr LocationReactorNew(const Location::Ptr &notifier) {
 			Ptr m = new LocationReactor(notifier);
@@ -471,10 +470,13 @@ public:
 
 	protected:
 		LocationReactor(const Location::Ptr &notifier):
-			Location::Notifiee()
+			Location::Notifiee(),
+			activityManager_(activityManagerInstance())
 			{
 				notifierIs(notifier);
 			}
+
+		Activity::Manager::Ptr activityManager_;
 	};
 
 
@@ -516,6 +518,39 @@ protected:
 	LocationReactor::Ptr locationReactor_;
 };
 
+class RetryActivityReactor : public Activity::Notifiee {
+public:
+	void onStatus();
+
+	static const double MAX_WAIT = 24.0;
+	static const double WAIT_MULTIPLE = 2.0;
+
+	RetryActivityReactor(Fwk::Ptr<Activity::Manager> manager,
+				Activity *activity, Shipment *shipment,
+				Segment *segment):
+		Notifiee(activity),
+		successfullyForwardedShipment_(false),
+		totalTimeWaiting_(0.0),
+		wait_(0.1),
+		shipment_(shipment),
+		segment_(segment),
+		activity_(activity),
+		manager_(manager)
+		{}
+
+	double wait() { return wait_; }
+
+protected:
+	bool successfullyForwardedShipment_;
+	double totalTimeWaiting_;
+	double wait_;
+	Fwk::Ptr<Shipment> shipment_;
+	Fwk::Ptr<Segment> segment_;
+	Activity::Ptr activity_;
+	Fwk::Ptr<Activity::Manager> manager_;
+};
+
+
 class Customer : public Location {
 public:
 	typedef Fwk::Ptr<Customer> Ptr;
@@ -536,11 +571,17 @@ public:
 	}
 	void destinationIs(Customer::Ptr c);
 	
-	ShipmentCount shipmentsReceived() const{
+	ShipmentCount shipmentsReceived() const {
 		return shipments_received_;
 	}
+	void shipmentsReceivedIs(ShipmentCount c) {
+		shipments_received_ = c;
+	}
+	void totalLatencyInc(Hours l) {
+		total_latency_ = Hours(total_latency_.value() + l.value());
+	}
 	Hours avgLatency() const{
-		return avg_latency_;
+		return Hours(total_latency_.value() / shipments_received_.value());
 	}
 	Dollars totalCost() const {
 		return total_cost_;
@@ -671,7 +712,7 @@ protected:
 	PackageCount shipment_size_;
 	Customer::Ptr destination_;
 	ShipmentCount shipments_received_;
-	Hours avg_latency_;
+	Hours total_latency_;
 	Dollars total_cost_;
 };
 
@@ -888,6 +929,9 @@ public:
 	Path::PtrConst path() const { return path_; }
 	void pathIs(const Path::PtrConst &path) { path_ = path; }
 
+	Hours latency() const { return latency_; }
+	void latencyInc(Hours l) { latency_ = Hours(latency_.value() + l.value()); }
+
 protected:
 	Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p);
 
@@ -895,6 +939,7 @@ protected:
 	Customer::Ptr dest_;
 	PackageCount load_;
 	Path::PtrConst path_;
+	Hours latency_;
 };
 
 
@@ -1283,7 +1328,7 @@ protected:
 	size_t numExpeditedSegments_;
 };
 
-
 } /* end namespace */
+
 
 #endif
