@@ -289,7 +289,7 @@ string SegmentRep::attribute(const string& name) {
         return s.stringValue();
     }
     else if (name == "Capacity"){
-        VehicleCount c = segment_ -> capacity();
+        VehicleCount c = segment_ -> numVehicles();
         return c.stringValue();
     }
     
