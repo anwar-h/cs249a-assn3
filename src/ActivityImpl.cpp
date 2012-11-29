@@ -32,15 +32,15 @@ namespace ActivityImpl {
     }
     
     Activity::Ptr ManagerImpl::activityNew(const string& name) {
-		Activity::Ptr activity = activities_[name];
+		Activity::Ptr activity;
+	//	activity = activities_[name];
 
-		if (activity) {
-		    cerr << "Activity already exists!" << endl;
-		    return Activity::Ptr();
-		}
-		
+	//	if (activity) {
+	//	    cerr << "Activity already exists!" << endl;
+	//	    return Activity::Ptr();
+	//	}
 		activity = new ActivityImpl(name, this);
-		activities_[name] = activity;
+	//	activities_[name] = activity;
 
 		return activity;
     }

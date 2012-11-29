@@ -9,8 +9,11 @@ class LocationRepTest : public ::testing::Test {
 protected:
 	virtual void SetUp() {
 		manager = shippingInstanceManager();
+		cout << __FILE__ << ":" << __LINE__ << endl;
 	    customer1 = manager->instanceNew("customer1", "Customer");
+	    cout << __FILE__ << ":" << __LINE__ << endl;
     	port1 = manager->instanceNew("port1", "Port");  
+    	cout << __FILE__ << ":" << __LINE__ << endl;
 	    terminal1 = manager->instanceNew("terminal1", "Boat terminal");
 	    terminal2 = manager->instanceNew("terminal1", "Plane terminal");
 	    terminal3 = manager->instanceNew("terminal1", "Truck terminal");      
@@ -25,6 +28,7 @@ protected:
 };
 
 TEST_F(LocationRepTest, InstanceNew) {
+	cout << __FILE__ << ":" << __LINE__ << endl;
 	EXPECT_EQ(manager->instance("customer1"), customer1);
 	EXPECT_EQ(manager->instance("port1"), port1);
 	EXPECT_EQ(manager->instance("terminal1"), terminal1);

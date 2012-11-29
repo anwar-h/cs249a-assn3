@@ -233,12 +233,6 @@ public:
 	void shipmentsReceivedIs(ShipmentCount c) { shipments_received_ = c; }
 	ShipmentCount shipmentsRefused() const { return shipments_refused_; }
 
-	static Segment::Ptr SegmentNew(Fwk::String name, Mode mode) {
-		Ptr m = new Segment(name, mode);
-		m->referencesDec(1);
-		// decr. refer count to compensate for initial val of 1
-		return m;
-	}
 
 	class NotifieeConst : public virtual Fwk::NamedInterface::NotifieeConst {
 	public:
@@ -318,6 +312,15 @@ public:
 		Activity::Manager::Ptr activityManager_;
 	};
 
+	void segmentReactorIs(SegmentReactor::Ptr reactor) { segmentReactor_ = reactor.ptr(); }
+	static Segment::Ptr SegmentNew(Fwk::String name, Mode mode) {
+		Ptr m = new Segment(name, mode);
+		m->segmentReactorIs( SegmentReactor::SegmentReactorNew(m.ptr()) );
+		m->referencesDec(1);
+		// decr. refer count to compensate for initial val of 1
+		return m;
+	}
+
 	typedef Fwk::ListRaw<NotifieeConst> NotifieeList;
 	typedef NotifieeList::Iterator NotifieeIterator;
    	NotifieeIterator notifieeIter() { return notifiee_.iterator(); }
@@ -336,7 +339,7 @@ protected:
 	}
 	
 	NotifieeList notifiee_;
-	SegmentReactor::Ptr segmentReactor_;
+	SegmentReactor* segmentReactor_;
 	Mode mode_;
 	Fwk::Ptr<Location> source_;
 	Mile length_;
@@ -398,12 +401,6 @@ public:
 		return segments_.end();
 	}
 
-	static Location::Ptr LocationNew(Fwk::String name, LocationType location_type) {
-		Ptr m = new Location(name, location_type);
-		m->referencesDec(1);
-		// decr. refer count to compensate for initial val of 1
-		return m;
-	}
 
 	class NotifieeConst : public virtual Fwk::NamedInterface::NotifieeConst {
 	public:
@@ -478,10 +475,21 @@ public:
 			activityManager_(activityManagerInstance())
 			{
 				notifierIs(notifier);
+				//cout << "notifier=" << notifier.ptr() << endl;
+				//cout << __FILE__ << ":" << __LINE__ << " LocationReactor()" << endl;
 			}
 
 		Activity::Manager::Ptr activityManager_;
 	};
+
+	void locationReactorIs(LocationReactor::Ptr reactor) { locationReactor_ = reactor.ptr(); }
+	static Location::Ptr LocationNew(Fwk::String name, LocationType location_type) {
+		Ptr m = new Location(name, location_type);
+		m->locationReactorIs( LocationReactor::LocationReactorNew(m.ptr()) );
+		m->referencesDec(1);
+		// decr. refer count to compensate for initial val of 1
+		return m;
+	}
 
 
 	typedef Fwk::ListRaw<NotifieeConst> NotifieeList;
@@ -492,9 +500,11 @@ public:
 protected:
 	Location(Fwk::String name, LocationType location_type):
 		Fwk::NamedInterface(name),
-		location_type_(location_type),
-		locationReactor_(LocationReactor::LocationReactorNew(this))
-		{}
+		location_type_(location_type)
+		{
+			//cout << "location(aka notifier)=" << this << endl;
+			//cout << __FILE__ << ":" << __LINE__ << " Location()" << endl;
+		}
 
 	void newNotifiee(Location::NotifieeConst *n) const {
 		Location* me = const_cast<Location*>(this);
@@ -519,7 +529,7 @@ protected:
 	NotifieeList notifiee_;
 	vector<Segment::PtrConst> segments_;
 	LocationType location_type_;
-	LocationReactor::Ptr locationReactor_;
+	LocationReactor* locationReactor_;
 };
 
 class Customer : public Location {
@@ -558,13 +568,6 @@ public:
 	void totalCostInc(Dollars d) { total_cost_ = Dollars(total_cost_.value() + d.value()); }
 	Dollars totalCost() const {
 		return total_cost_;
-	}
-
-	static Customer::Ptr CustomerNew(Fwk::String name) {
-		Ptr m = new Customer(name);
-		m->referencesDec(1);
-		// decr. refer count to compensate for initial val of 1
-		return m;
 	}
 
 	class NotifieeConst : public virtual Fwk::NamedInterface::NotifieeConst {
@@ -645,6 +648,7 @@ public:
 			{
 				notifierIs(notifier);
 				attributesSet_[0] = attributesSet_[1] = attributesSet_[2] = 0;
+				//cout << __FILE__ << ":" << __LINE__ << " CustomerReactor()" << endl;
 			}
 
 		enum Attributes {transferRate_ = 0, shipmentSize_, dest_};
@@ -658,6 +662,15 @@ public:
 		Customer::Ptr destination_;
 	};
 
+	void customerReactorIs(CustomerReactor::Ptr reactor) { customerReactor_ = reactor.ptr(); }
+
+	static Customer::Ptr CustomerNew(Fwk::String name) {
+		Ptr m = new Customer(name);
+		m->customerReactorIs( CustomerReactor::CustomerReactorNew(m.ptr()) );
+		m->referencesDec(1);
+		// decr. refer count to compensate for initial val of 1
+		return m;
+	}
 
 	typedef Fwk::ListRaw<NotifieeConst> NotifieeList;
 	typedef NotifieeList::Iterator NotifieeIterator;
@@ -666,9 +679,10 @@ public:
 	
 protected:
 	Customer(Fwk::String name):
-		Location(name, Location::customer()),
-		customerReactor_(CustomerReactor::CustomerReactorNew(this))
-		{}
+		Location(name, Location::customer())
+		{
+			//cout << __FILE__ << ":" << __LINE__ << " Customer()" << endl;
+		}
 
 	void newNotifiee(Customer::NotifieeConst *n) const {
 		Customer* me = const_cast<Customer*>(this);
@@ -679,7 +693,7 @@ protected:
 		me->notifiee_.deleteMember(n);
 	}
 	
-	CustomerReactor::Ptr customerReactor_;
+	CustomerReactor* customerReactor_;
 	NotifieeList notifiee_;
 	ShipmentCount transfer_rate_;
 	PackageCount shipment_size_;
@@ -838,7 +852,7 @@ protected:
 				capacities_[keys[i]] = PackageCount(100);
 			}
 
-			Activity::Ptr activity = activityManager_->activityNew("Fleet");
+			Activity::Ptr activity = activityManager_->activityNew("FleetActivity");
 			activity->lastNotifieeIs( new FleetActivityReactor(activityManager_, activity.ptr(), this) );
 			activity->nextTimeIs(8.0);
 			activity->statusIs(Activity::nextTimeScheduled);

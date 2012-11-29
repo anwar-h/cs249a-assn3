@@ -33,14 +33,13 @@ int main(int argc, char *argv[]) {
 	// Locations
     Ptr<Instance> dest = manager->instanceNew("destcustomer", "Customer");
 	Ptr<Instance> hub = manager->instanceNew("termhub", "Truck terminal");
-	
+
 
 	Ptr<Instance> seg0 = manager->instanceNew("seg0", "Truck segment");
 	Ptr<Instance> seg1 = manager->instanceNew("seg1", "Truck segment");
 	seg0->attributeIs("source", "destcustomer");
 	seg1->attributeIs("source", "termhub");
 	seg0->attributeIs("return segment", "seg1");
-
 
 
 	for(int i = 0; i < 10; i++){
@@ -59,25 +58,27 @@ int main(int argc, char *argv[]) {
 		segs10[i*2]->attributeIs("return segment", sname1.str());
 		
 
+
 		for (int j = 0; j < 10; j++){
 			stringstream cname;
 			cname << "scust"<< j + i * 20;
 			sources.push_back( manager->instanceNew(cname.str(), "Customer") );
-			
+
 			stringstream ssname0, ssname1;
 			ssname0 << "sg" << i * 20 + j * 2;
 			ssname1 << "sg" << i * 20 + j * 2 + 1;
-
 			segs100.push_back(manager->instanceNew(ssname0.str(), "Truck segment"));
 			segs100.push_back(manager->instanceNew(ssname1.str(), "Truck segment"));
 			segs100[i*20 + j*2]->attributeIs("source", tname.str());
 			segs100[i*20 + j*2 + 1]->attributeIs("source", cname.str());
 			segs100[i*20 + j*2]->attributeIs("return segment", ssname1.str());		
+
 		}
 	}
 
 	seg0->attributeIs("length", "50");
 	seg1->attributeIs("Capacity", "30");
+
 
 	for(size_t i = 0; i < segs10.size(); i ++){
 		segs10[i]->attributeIs("length", "100");

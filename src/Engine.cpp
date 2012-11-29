@@ -4,7 +4,6 @@ namespace Shipping {
 
 Segment::Segment(Fwk::String name, Mode mode):
 	Fwk::NamedInterface(name),
-	segmentReactor_(SegmentReactor::SegmentReactorNew(this)),
 	mode_(mode),
 	exp_support_(Segment::expediteNotSupported())
 	{}
@@ -120,7 +119,7 @@ void
 Segment::SegmentReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
-	Activity::Ptr activity = activityManager_->activityNew("Forwarding");
+	Activity::Ptr activity = activityManager_->activityNew("ForwardingActivity");
 	activity->lastNotifieeIs( new ForwardActivityReactor(activityManager_, activity.ptr(), notifier().ptr(), shipment.ptr()) );
 	Segment::Ptr seg = notifier();
 	Fleet::PtrConst fleet = networkInstance()->fleet();
@@ -212,7 +211,7 @@ Location::LocationReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 			}
 		} catch(...) {
 			// create retry activity
-			Activity::Ptr activity = activityManager_->activityNew("Retry");
+			Activity::Ptr activity = activityManager_->activityNew("RetryActivity");
 			activity->lastNotifieeIs( new RetryActivityReactor(activityManager_, activity.ptr(), shipment.ptr(), segment.ptr()) );
 			double wait = dynamic_cast<RetryActivityReactor*>(activity->notifiee().ptr())->wait();
 			activity->nextTimeIs(activityManager_->now().value() + wait);
@@ -449,13 +448,15 @@ Customer::CustomerReactor::InjectActivityReactorNew()
 	}
 	else return;
 
-	Activity::Ptr activity = activityManager_->activityNew("Inject");
+	Activity::Ptr activity = activityManager_->activityNew("InjectActivity");
 	activity->lastNotifieeIs(
 		new InjectActivityReactor(activityManager_, activity.ptr(),
 			notifier().ptr(), 24.0 / (double) notifier()->transferRate().value())
 		);
 	activity->nextTimeIs(activityManager_->now().value());
 	activity->statusIs(Activity::nextTimeScheduled);
+
+	//delete this; // we no longer have any use for this
 }
 
 
