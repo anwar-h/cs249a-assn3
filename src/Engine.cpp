@@ -240,21 +240,24 @@ void RetryActivityReactor::onStatus() {
 void InjectActivityReactor::onStatus() {
     switch (activity_->status()) {
 	    case Activity::executing:
-			//I am executing now
-
+	    {
+	    	Shipment::Ptr shipment = networkInstance()->shipmentNew(customer_, customer_->destination(), customer_->shipmentSize());
+			customer_->arrivingShipmentIs(shipment);
 			break;
-		
+		}
 	    case Activity::free:
+	    {
 			//when done, automatically enqueue myself for next execution
 			activity_->nextTimeIs(Time(activity_->nextTime().value() + rate_));
 			activity_->statusIs(Activity::nextTimeScheduled);
 			break;
-
+		}
 	    case Activity::nextTimeScheduled:
+	    {
 			//add myself to be scheduled
 			manager_->lastActivityIs(activity_);
 			break;
-		
+		}
 	    default: break;
     }
 }
@@ -262,10 +265,11 @@ void InjectActivityReactor::onStatus() {
 void ForwardActivityReactor::onStatus() {
     switch (activity_->status()) {
 	    case Activity::executing:
+	    {
 	    	Location::Ptr next = segment_->returnSegment()->source();
 	    	next->arrivingShipmentIs(shipment_);
 			break;
-	
+		}
 	    case Activity::free:
 			break;
 
@@ -349,8 +353,8 @@ Customer::NotifieeConst::~NotifieeConst() {
 bool
 Customer::CustomerReactor::customerIsReady() const
 {
-	if (attributesSet_[transferRate_] && transferRate_.value() > 0 &&
-		attributesSet_[shipmentSize_] && shipmentSize_.value() > 0 &&
+	if (attributesSet_[transferRate_] && notifier()->transferRate().value() > 0 &&
+		attributesSet_[shipmentSize_] && notifier()->shipmentSize().value() > 0 &&
 		attributesSet_[dest_]) {
 		return true;
 	}
@@ -393,7 +397,10 @@ Customer::CustomerReactor::InjectActivityReactorNew()
 	else return;
 
 	Activity::Ptr activity = activityManager_->activityNew("Inject");
-	activity->lastNotifieeIs( new InjectActivityReactor(activityManager_, activity.ptr(), notifier().ptr(), 24.0 / (double) transferRate_.value()) );
+	activity->lastNotifieeIs(
+		new InjectActivityReactor(activityManager_, activity.ptr(),
+			notifier().ptr(), 24.0 / (double) notifier()->transferRate().value())
+		);
 	activity->nextTimeIs(activityManager_->now().value());
 	activity->statusIs(Activity::nextTimeScheduled);
 }
@@ -1195,6 +1202,19 @@ Network::connectivityDel(Fwk::String name)
 	}
 	return conn;
 }
+Shipment::Ptr
+Network::shipmentNew(Customer::Ptr s, Customer::Ptr d, PackageCount p)
+{
+	Shipment::Ptr shipment = Shipment::ShipmentNew(s, d, p);
+	// tell all the notifiees
+	if(notifiees()) {
+		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
+			try { n->onShipmentNew(shipment); }
+			catch(...) { cerr << "Network::shipmentNew() notification for " << shipment->name() << " unsuccessful" << endl; }
+		}
+	}
+	return shipment;	
+}
 
 void
 Network::NotifieeConst::notifierIs(const Network::PtrConst& _notifier) {
@@ -1272,6 +1292,21 @@ Statistics::onTerminalDel(Terminal::Ptr terminal)
 {
 	Segment::Mode type = terminal->vehicleType();
 	numTerminalsIs(type, numTerminals(type) - 1);
+}
+
+void
+Statistics::onShipmentNew(Shipment::Ptr shipment)
+{
+	numShipments_++;
+	map<string, ShippingRecord>::iterator found = shipmentRecords_.find(shipment->name());
+	if (found == shipmentRecords_.end()) {
+		ShippingRecord record;
+		record.numEnRouteInc();
+		shipmentRecords_[shipment->name()] = record;
+	}
+	else {
+		found->second.numEnRouteInc();
+	}
 }
 
 void

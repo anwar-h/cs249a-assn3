@@ -898,6 +898,13 @@ public:
 	Hours latency() const { return latency_; }
 	void latencyInc(Hours l) { latency_ = Hours(latency_.value() + l.value()); }
 
+	static Shipment::Ptr ShipmentNew(Customer::Ptr s, Customer::Ptr d, PackageCount p) {
+		Ptr m = new Shipment(s, d, p);
+		m->referencesDec(1);
+		// decr. refer count to compensate for initial val of 1
+		return m;
+	}
+
 protected:
 	Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p);
 
@@ -1167,6 +1174,7 @@ public:
 
 	Fleet::PtrConst fleet() const { return fleet_; }
 	Connectivity::PtrConst connectivity() const { return connectivity_; }
+	Fwk::Ptr<Statistics const> statistics() const { return statistics_; }
 
 	void expediteSupportIs(Fwk::String name, Segment::ExpediteSupport supported);
 	Segment::Ptr segmentNew(Fwk::String name, Segment::Mode mode);
@@ -1189,6 +1197,8 @@ public:
 
 	Connectivity::Ptr connectivityNew(Fwk::String name);
 	Connectivity::Ptr connectivityDel(Fwk::String name);
+
+	Shipment::Ptr shipmentNew(Customer::Ptr s, Customer::Ptr d, PackageCount p);
 
 	static Network::Ptr NetworkNew(Fwk::String name) {
 		Ptr m = new Network(name);		
@@ -1220,6 +1230,8 @@ public:
 		virtual void onCustomerDel(Customer::Ptr customer) {}
 		virtual void onPortDel(Port::Ptr port) {}
 		virtual void onTerminalDel(Terminal::Ptr terminal) {}
+
+		virtual void onShipmentNew(Shipment::Ptr shipment) {}
 
 		virtual void onNumExpediteSupportedSegments(int n) {}
 
@@ -1309,6 +1321,24 @@ public:
 	typedef Fwk::Ptr<Statistics> Ptr;
 	typedef Fwk::Ptr<Statistics const> PtrConst;
 
+	enum ShipmentStatus {
+		enroute_ = 0,
+		delivered_,
+		dropped_
+	};
+
+	struct ShippingRecord {
+		int record[3];
+
+		void numEnRouteInc(int n = 1) { record[enroute_] += n; }
+		void numDeliveredInc(int n = 1) {record[delivered_] += n; }
+		void numDroppedInc(int n = 1) {record[dropped_] += n; }
+
+		size_t numEnRoute() { return record[enroute_]; }
+		size_t numDelivered() { return record[delivered_]; }
+		size_t numDropped() { return record[dropped_]; }
+	};
+
 	size_t numCustomers() {
 		return numCustomers_;
 	}
@@ -1325,6 +1355,8 @@ public:
 		return numSegments_[mode];
 	}
 
+	size_t numShipments() { return numShipments_; }
+
 	float percentExpeditedSegments();
 	
 
@@ -1339,6 +1371,7 @@ protected:
 		Network::Notifiee(),
 		numCustomers_(0),
 		numPorts_(0),
+		numShipments_(0),
 		numExpeditedSegments_(0)
 		{
 			for(size_t i = 0; i < 3; i++) {
@@ -1369,13 +1402,18 @@ protected:
 	void onCustomerDel(Customer::Ptr customer);
 	void onPortDel(Port::Ptr port);
 	void onTerminalDel(Terminal::Ptr terminal);
+
+	void onShipmentNew(Shipment::Ptr shipment);
 	
 	void onNumExpediteSupportedSegments(int n);
+
+	map<string, ShippingRecord> shipmentRecords_;
 
 	size_t numCustomers_;
 	size_t numPorts_;
 	size_t numTerminals_[3];
 	size_t numSegments_[3];
+	size_t numShipments_;
 	size_t numExpeditedSegments_;
 };
 
