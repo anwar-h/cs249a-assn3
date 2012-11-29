@@ -735,19 +735,56 @@ public:
 	typedef Fwk::Ptr<Fleet> Ptr;
 	typedef Fwk::Ptr<Fleet const> PtrConst;
 
-	MilesPerHour speed(Segment::Mode m) const { return speed_[m]; }
-	void speedIs(Segment::Mode m, MilesPerHour s){
-		speed_[m] = s;
+	enum TimeOfDay {
+		day_,
+		night_,
+	};
+
+	static inline TimeOfDay day() { return day_; }
+	static inline TimeOfDay night() { return night_; }
+	static string timeOfDayString(TimeOfDay t) {
+		switch(t) {
+			case day_: return "day";
+			case night_: return "night";
+			default: return "";
+		}
 	}
 
-	PackageCount capacity(Segment::Mode m) const { return capacity_[m]; }
-	void capacityIs(Segment::Mode m, PackageCount c){
-		capacity_[m] = c;
+	TimeOfDay timeOfDay() const { return time_of_day_; }
+	void timeOfDayIs(TimeOfDay t) { time_of_day_ = t; }
+
+
+	MilesPerHour speed(Segment::Mode m) const { return speed(m, timeOfDay()); }
+	MilesPerHour speed(Segment::Mode m, TimeOfDay tod) const
+	{
+		map<string, MilesPerHour>::const_iterator found = speeds_.find(key(m, tod));
+		if (found != speeds_.end()) return found->second;
+		return MilesPerHour();
+	}
+	void speedIs(Segment::Mode m, MilesPerHour s, TimeOfDay tod) {
+		speeds_[key(m, tod)] = s;
 	}
 
-	Dollars costPerMile(Segment::Mode m) const { return cost_per_mile_[m]; }
-	void costPerMileIs(Segment::Mode m, Dollars cpm){
-		cost_per_mile_[m] = cpm;
+	PackageCount capacity(Segment::Mode m) const { return capacity(m, timeOfDay()); }
+	PackageCount capacity(Segment::Mode m, TimeOfDay tod) const
+	{
+		map<string, PackageCount>::const_iterator found = capacities_.find(key(m, tod));
+		if (found != capacities_.end()) return found->second;
+		return PackageCount();
+	}
+	void capacityIs(Segment::Mode m, PackageCount c, TimeOfDay tod) {
+		capacities_[key(m, tod)] = c;
+	}
+
+	Dollars costPerMile(Segment::Mode m) const { return costPerMile(m, timeOfDay()); }
+	Dollars costPerMile(Segment::Mode m, TimeOfDay tod) const
+	{
+		map<string, Dollars>::const_iterator found = costs_per_mile_.find(key(m, tod));
+		if (found != costs_per_mile_.end()) return found->second;
+		return Dollars();
+	}
+	void costPerMileIs(Segment::Mode m, Dollars cpm, TimeOfDay tod) {
+		costs_per_mile_[key(m, tod)] = cpm;
 	}
 
 	static Fleet::Ptr FleetNew(Fwk::String name) {
@@ -759,15 +796,38 @@ public:
 
 protected:	
 	Fleet(Fwk::String name):
-		Fwk::NamedInterface(name)
+		Fwk::NamedInterface(name),
+		time_of_day_(Fleet::night())
 		{
-			cost_per_mile_[0] = cost_per_mile_[1] = cost_per_mile_[2] = Dollars(1.f);
-			speed_[0] = speed_[1] = speed_[2] = MilesPerHour(1.f);
+			vector<string> keys;
+			keys.push_back(key(Segment::truck(), Fleet::day()));
+			keys.push_back(key(Segment::boat(), Fleet::day()));
+			keys.push_back(key(Segment::plane(), Fleet::day()));
+			keys.push_back(key(Segment::truck(), Fleet::night()));
+			keys.push_back(key(Segment::boat(), Fleet::night()));
+			keys.push_back(key(Segment::plane(), Fleet::night()));
+
+			for (size_t i = 0; i < keys.size(); i++) {
+				costs_per_mile_[keys[i]] = Dollars(1.f);
+				speeds_[keys[i]] = MilesPerHour(1.f);
+				capacities_[keys[i]] = PackageCount(100);
+			}
 		}
 
-	MilesPerHour speed_[3];
-	PackageCount capacity_[3];
-	Dollars cost_per_mile_[3];
+	string key(Segment::Mode m, TimeOfDay t) const {
+		stringstream stream;
+		stream << Segment::modeName(m) << "_" << Fleet::timeOfDayString(t);
+		return stream.str();
+	}
+
+	map<string, MilesPerHour> speeds_;
+	map<string, PackageCount> capacities_;
+	map<string, Dollars> costs_per_mile_;
+
+	TimeOfDay time_of_day_;
+	//MilesPerHour speed_[3];
+	//PackageCount capacity_[3];
+	//Dollars cost_per_mile_[3];
 };
 
 class Path : public Fwk::NamedInterface {
@@ -969,8 +1029,8 @@ protected:
 	double rate_;
 	Activity::Ptr activity_;
 	Fwk::Ptr<Activity::Manager> manager_;
-	
 };
+
 class ForwardActivityReactor : public Activity::Notifiee {
 public:
 	void onStatus();
@@ -987,6 +1047,23 @@ public:
 protected:
 	Segment::Ptr segment_;
 	Shipment::Ptr shipment_;
+	Activity::Ptr activity_;
+	Fwk::Ptr<Activity::Manager> manager_;
+};
+
+class FleetActivityReactor : public Activity::Notifiee {
+public:
+	void onStatus();
+
+	FleetActivityReactor(Fwk::Ptr<Activity::Manager> manager, Activity *activity, Fleet *fleet):
+		Notifiee(activity),
+		fleet_(fleet),
+		activity_(activity),
+		manager_(manager)
+		{}
+
+protected:
+	Fleet::Ptr fleet_;
 	Activity::Ptr activity_;
 	Fwk::Ptr<Activity::Manager> manager_;
 };

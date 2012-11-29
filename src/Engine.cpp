@@ -308,6 +308,32 @@ void ForwardActivityReactor::onStatus() {
     }
 }
 
+void FleetActivityReactor::onStatus() {
+    switch (activity_->status()) {
+	    case Activity::executing:
+	    {
+	    	// switch fleet attributes
+	    	if (fleet_->timeOfDay() == Fleet::night())
+	    		fleet_->timeOfDayIs(Fleet::day());
+	    	else fleet_->timeOfDayIs(Fleet::night());
+			break;
+		}
+	    case Activity::free:
+	    {
+			//when done, automatically enqueue myself for next execution
+			activity_->nextTimeIs(Time(activity_->nextTime().value() + 12.0));
+			activity_->statusIs(Activity::nextTimeScheduled);
+			break;
+		}
+	    case Activity::nextTimeScheduled:
+	    {
+			//add myself to be scheduled
+			manager_->lastActivityIs(activity_);
+			break;
+		}
+	    default: break;
+    }
+}
 
 
 void
