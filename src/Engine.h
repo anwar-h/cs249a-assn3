@@ -219,9 +219,14 @@ public:
 
 	void arrivingShipmentIs(Fwk::Ptr<Shipment> &shipment);
 
-	VehicleCount capacity() const { return capacity_; }
-	void capacityIs(VehicleCount vc){
-		capacity_ = vc;
+	VehicleCount numVehicles() const { return numVehicles_; }
+	void numVehiclesIs(VehicleCount vc){
+		numVehicles_ = vc;
+	}
+
+	PackageCount segmentLoad() const { return segmentLoad_; }
+	void segmentLoadIs(PackageCount pc){
+		segmentLoad_ = pc;
 	}
 
 	ShipmentCount shipmentsReceived() const { return shipments_received_; }
@@ -332,14 +337,14 @@ protected:
 	
 	NotifieeList notifiee_;
 	SegmentReactor::Ptr segmentReactor_;
-	queue<Fwk::Ptr<Shipment> > shipmentQueue_;
 	Mode mode_;
 	Fwk::Ptr<Location> source_;
 	Mile length_;
 	Segment::Ptr return_segment_;
 	Difficulty difficulty_;
 	ExpediteSupport exp_support_;
-	VehicleCount capacity_;
+	VehicleCount numVehicles_;
+	PackageCount segmentLoad_;
 	ShipmentCount shipments_received_;
 	ShipmentCount shipments_refused_;
 };

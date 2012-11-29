@@ -87,16 +87,17 @@ void
 Segment::arrivingShipmentIs(Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
-	PackageCount vehicalCapacity = networkInstance()->fleet()->capacity(mode());
-	VehicleCount numVehicles = capacity();
-	if (shipment->load() <= capacity().value() * vehicalCapacity.value()) {
-		// our capacity is decreased cause we are taking this shipment
-		//capacityIs(PackageCount(capacity().value() - shipment->load().value()));
+	PackageCount packagesPerVehicle = networkInstance()->fleet()->capacity(mode());
+	VehicleCount numVehiclesOnSegment = numVehicles();
 
-		// add this shipment to our queue
-		shipmentQueue_.push(shipment);
+	PackageCount totalPossiblePackages =
+		PackageCount(numVehiclesOnSegment.value() * packagesPerVehicle.value());
 
-	
+	PackageCount spaceAvailable = PackageCount(totalPossiblePackages.value() - segmentLoad().value());
+
+	if (shipment->load() <= spaceAvailable) {
+		segmentLoadIs( PackageCount(segmentLoad().value() + shipment->load().value()) );
+
 		// tell all the notifiees
 		if(notifiees()) {
 			for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
@@ -177,10 +178,9 @@ Location::LocationReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 	LocationType locationType = notifier()->locationType();
 	string destinationName = shipment->dest()->name();
 	string sourceName = shipment->source()->name();
+	Statistics::Ptr stats = const_cast<Statistics*>(networkInstance()->statistics().ptr());
 
-	if (locationType == Location::customer() && sourceName != notifier()->name()) {
-		Statistics::Ptr stats = const_cast<Statistics*>(networkInstance()->statistics().ptr());
-		
+	if (locationType == Location::customer() && sourceName != notifier()->name()) {		
 		if (destinationName == notifier()->name()) {
 			//at destination
 			Customer *thisPtr = dynamic_cast<Customer*>(notifier().ptr());
@@ -200,14 +200,21 @@ Location::LocationReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 			if (thisLocationIndex + 1 < shipment->path()->numParts()) {
 				Segment::PtrConst seg = shipment->path()->part(thisLocationIndex + 1).seg;
 				segment = const_cast<Segment*>(seg.ptr());
+
+				// may throw exception
 				segment->arrivingShipmentIs(shipment);
 			}
-			else cerr << __FILE__":"<<__LINE__<<": LocationReactor::onShipmentArival() next segment index out of bounds." << endl;
+			else {
+				// DROP SHIPMENT
+				stats->droppedShipmentIs(shipment);
+				cerr << __FILE__":"<<__LINE__<<": LocationReactor::onShipmentArival() next segment index out of bounds." << endl;
+			}
 		} catch(...) {
 			// create retry activity
 			Activity::Ptr activity = activityManager_->activityNew("Retry");
 			activity->lastNotifieeIs( new RetryActivityReactor(activityManager_, activity.ptr(), shipment.ptr(), segment.ptr()) );
-			activity->nextTimeIs(activityManager_->now().value() + dynamic_cast<RetryActivityReactor*>(activity->notifiee().ptr())->wait());
+			double wait = dynamic_cast<RetryActivityReactor*>(activity->notifiee().ptr())->wait();
+			activity->nextTimeIs(activityManager_->now().value() + wait);
 			activity->statusIs(Activity::nextTimeScheduled);
 		}
 	}
@@ -230,19 +237,27 @@ void RetryActivityReactor::onStatus() {
 	
 		case Activity::free:
 		{
-			if (!successfullyForwardedShipment_ && totalTimeWaiting_ <= MAX_WAIT) {
-				activity_->nextTimeIs(Time(activity_->nextTime().value() + wait_));
-				totalTimeWaiting_ += wait_;
-				wait_ *= WAIT_MULTIPLE;
-				activity_->statusIs(Activity::nextTimeScheduled);
+			if (!successfullyForwardedShipment_) {
+				if (totalTimeWaiting_ <= MAX_WAIT) {
+					activity_->nextTimeIs(Time(activity_->nextTime().value() + wait_));
+					totalTimeWaiting_ += wait_;
+					wait_ *= WAIT_MULTIPLE;
+					activity_->statusIs(Activity::nextTimeScheduled);
+				}
+				else {
+					Statistics::Ptr stats = const_cast<Statistics*>(networkInstance()->statistics().ptr());
+					stats->droppedShipmentIs(shipment_);
+				}
 			}
 			break;
 		}
 
 		case Activity::nextTimeScheduled:
+		{
 			//add myself to be scheduled
 			manager_->lastActivityIs(activity_);
 			break;
+		}
 
 		default: break;
 	}
