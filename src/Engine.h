@@ -554,6 +554,8 @@ public:
 	Hours avgLatency() const{
 		return Hours(total_latency_.value() / shipments_received_.value());
 	}
+
+	void totalCostInc(Dollars d) { total_cost_ = Dollars(total_cost_.value() + d.value()); }
 	Dollars totalCost() const {
 		return total_cost_;
 	}
@@ -730,6 +732,28 @@ protected:
 	Segment::Mode vehicle_type_;
 };
 
+class Fleet;
+class FleetActivityReactor : public Activity::Notifiee {
+public:
+
+	static const double HALF_DAY = 12.0;
+
+	void onStatus();
+
+	FleetActivityReactor(Fwk::Ptr<Activity::Manager> manager, Activity *activity, Fleet *fleet):
+		Notifiee(activity),
+		fleet_(fleet),
+		activity_(activity),
+		manager_(manager)
+		{}
+
+protected:
+	Fwk::Ptr<Fleet> fleet_;
+	Activity::Ptr activity_;
+	Fwk::Ptr<Activity::Manager> manager_;
+};
+
+
 class Fleet : public Fwk::NamedInterface {
 public:
 	typedef Fwk::Ptr<Fleet> Ptr;
@@ -797,7 +821,8 @@ public:
 protected:	
 	Fleet(Fwk::String name):
 		Fwk::NamedInterface(name),
-		time_of_day_(Fleet::night())
+		time_of_day_(Fleet::night()),
+		activityManager_(activityManagerInstance())
 		{
 			vector<string> keys;
 			keys.push_back(key(Segment::truck(), Fleet::day()));
@@ -812,6 +837,11 @@ protected:
 				speeds_[keys[i]] = MilesPerHour(1.f);
 				capacities_[keys[i]] = PackageCount(100);
 			}
+
+			Activity::Ptr activity = activityManager_->activityNew("Fleet");
+			activity->lastNotifieeIs( new FleetActivityReactor(activityManager_, activity.ptr(), this) );
+			activity->nextTimeIs(8.0);
+			activity->statusIs(Activity::nextTimeScheduled);
 		}
 
 	string key(Segment::Mode m, TimeOfDay t) const {
@@ -825,9 +855,7 @@ protected:
 	map<string, Dollars> costs_per_mile_;
 
 	TimeOfDay time_of_day_;
-	//MilesPerHour speed_[3];
-	//PackageCount capacity_[3];
-	//Dollars cost_per_mile_[3];
+	Activity::Manager::Ptr activityManager_;
 };
 
 class Path : public Fwk::NamedInterface {
@@ -1051,22 +1079,6 @@ protected:
 	Fwk::Ptr<Activity::Manager> manager_;
 };
 
-class FleetActivityReactor : public Activity::Notifiee {
-public:
-	void onStatus();
-
-	FleetActivityReactor(Fwk::Ptr<Activity::Manager> manager, Activity *activity, Fleet *fleet):
-		Notifiee(activity),
-		fleet_(fleet),
-		activity_(activity),
-		manager_(manager)
-		{}
-
-protected:
-	Fleet::Ptr fleet_;
-	Activity::Ptr activity_;
-	Fwk::Ptr<Activity::Manager> manager_;
-};
 
 
 class Connectivity : public Fwk::NamedInterface {

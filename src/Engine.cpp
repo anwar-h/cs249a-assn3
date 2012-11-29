@@ -183,9 +183,10 @@ Location::LocationReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 	if (locationType == Location::customer() && sourceName != notifier()->name()) {		
 		if (destinationName == notifier()->name()) {
 			//at destination
-			Customer *thisPtr = dynamic_cast<Customer*>(notifier().ptr());
-			thisPtr->shipmentsReceivedIs(ShipmentCount(thisPtr->shipmentsReceived().value() + 1));
-			thisPtr->totalLatencyInc(shipment->latency());
+			Customer *customer = dynamic_cast<Customer*>(notifier().ptr());
+			customer->shipmentsReceivedIs(ShipmentCount(customer->shipmentsReceived().value() + 1));
+			customer->totalLatencyInc(shipment->latency());
+			customer->totalCostInc(shipment->path()->cost());
 			stats->deliveredShipmentIs(shipment);
 		}
 		else {
@@ -321,7 +322,7 @@ void FleetActivityReactor::onStatus() {
 	    case Activity::free:
 	    {
 			//when done, automatically enqueue myself for next execution
-			activity_->nextTimeIs(Time(activity_->nextTime().value() + 12.0));
+			activity_->nextTimeIs(Time(activity_->nextTime().value() + HALF_DAY));
 			activity_->statusIs(Activity::nextTimeScheduled);
 			break;
 		}

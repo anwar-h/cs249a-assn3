@@ -77,7 +77,8 @@ public:
 	static inline ManagerType realtime() { return real_time_; }
 	static inline ManagerType virtualtime() { return virtual_time_; }
 
-	ManagerType managerType() { return managerType_; }
+	void managerTypeIs(ManagerType m) { managerType_ = m; }
+	ManagerType managerType() const { return managerType_; }
 
 	virtual Activity::Ptr activityNew(const string& name);
 	virtual Activity::Ptr activity(const string& name) const;

@@ -25,6 +25,9 @@ namespace ActivityImpl {
 		if (!activityInstance_) {
 		    activityInstance_ = new ManagerImpl(t);
 		}
+		if (t == ManagerImpl::realtime()) {
+			dynamic_cast<ManagerImpl*>(activityInstance_.ptr())->managerTypeIs(ManagerImpl::realtime());
+		}
 		return activityInstance_;
     }
     
