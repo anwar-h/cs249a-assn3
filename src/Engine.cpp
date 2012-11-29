@@ -1,47 +1,5 @@
 #include "Engine.h"
 
-namespace ActivityImpl {
-	//Shipping::networkInstance()
-    void ManagerImpl::nowIs(Time t) {
-    	static bool beenHere = false;
-
-    	if (!beenHere) {
-    		beenHere = true;
-    		// preprocess code here
-    	}
-		//find the most recent activites to run and run them in order
-		while (!scheduledActivities_.empty()) {
-		    
-		    //figure out the next activity to run
-		    Activity::Ptr nextToRun = scheduledActivities_.top();
-
-		    //if the next time is greater than the specified time, break
-		    //the loop
-		    if (nextToRun->nextTime() > t) {
-				break;
-		    }
-		    
-		    //calculate amount of time to sleep
-		    Time diff = Time(nextToRun->nextTime().value() - now_.value());
-		    
-		    //sleep 100ms (100,000 microseconds) for every unit of time
-		    usleep(( ((int)diff.value()) * 100000));
-		    
-		    now_ = nextToRun->nextTime();
-
-		    //run the minimum time activity and remove it from the queue
-		    scheduledActivities_.pop();
-
-		    nextToRun->statusIs(Activity::executing);
-		    nextToRun->statusIs(Activity::free);
-
-		}
-
-		//syncrhonize the time
-		now_ = t;
-    }
-}
-
 namespace Shipping {
 
 Segment::Segment(Fwk::String name, Mode mode):
@@ -162,7 +120,7 @@ Segment::SegmentReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
 	Activity::Ptr activity = activityManager_->activityNew("Forwarding");
-	activity->lastNotifieeIs( new ForwardActivityReactor(activityManager_, activity.ptr()) );
+	activity->lastNotifieeIs( new ForwardActivityReactor(activityManager_, activity.ptr()), shipment.ptr());
 	Segment::Ptr seg = notifier();
 	Fleet::PtrConst fleet = networkInstance()->fleet();
 	Time timeToTraverse = Time(seg->length().value() / fleet->speed(seg->mode()).value());
@@ -194,20 +152,20 @@ Location::NotifieeConst::notifierIs(const Location::PtrConst& _notifier) {
    if(_notifier==notifier_) return;
    notifier_ = _notifier;
    if(notifierSave) {
-      notifierSave->deleteNotifiee(this);
+	  notifierSave->deleteNotifiee(this);
    }
    if(_notifier) {
-      _notifier->newNotifiee(this);
+	  _notifier->newNotifiee(this);
    }
    if(isNonReferencing_) {
-      if(notifierSave) notifierSave->newRef();
-      if(notifier_) notifier_->deleteRef();
+	  if(notifierSave) notifierSave->newRef();
+	  if(notifier_) notifier_->deleteRef();
    }
 }
 
 Location::NotifieeConst::~NotifieeConst() {
    if(notifier_) {
-      notifier_->deleteNotifiee(this);
+	  notifier_->deleteNotifiee(this);
    }
    if(notifier_&&isNonReferencing()) notifier_->newRef();
 }
@@ -245,22 +203,22 @@ Location::LocationReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 }
 
 void RetryActivityReactor::onStatus() {
-    switch (activity_->status()) {
-	    case Activity::executing:
-	    {
+	switch (activity_->status()) {
+		case Activity::executing:
+		{
 			//Retry forwarding the shipment
-	    	try {
-	    		segment_->arrivingShipmentIs(shipment_);
+			try {
+				segment_->arrivingShipmentIs(shipment_);
 
-	    		// If we get to this line, we know this was successful
-	    		// otherwise we would throw an exception.
-	    		successfullyForwardedShipment_ = true;
-	    	} catch(...) { /* we will reschedule ourselves */ }
+				// If we get to this line, we know this was successful
+				// otherwise we would throw an exception.
+				successfullyForwardedShipment_ = true;
+			} catch(...) { /* we will reschedule ourselves */ }
 			break;
 		}
 	
-	    case Activity::free:
-	    {
+		case Activity::free:
+		{
 			if (!successfullyForwardedShipment_ && totalTimeWaiting_ <= MAX_WAIT) {
 				activity_->nextTimeIs(Time(activity_->nextTime().value() + wait_));
 				totalTimeWaiting_ += wait_;
@@ -270,13 +228,13 @@ void RetryActivityReactor::onStatus() {
 			break;
 		}
 
-	    case Activity::nextTimeScheduled:
+		case Activity::nextTimeScheduled:
 			//add myself to be scheduled
 			manager_->lastActivityIs(activity_);
 			break;
 
-	    default: break;
-    }
+		default: break;
+	}
 }
 
 
@@ -328,20 +286,20 @@ Customer::NotifieeConst::notifierIs(const Customer::PtrConst& _notifier) {
    if(_notifier==notifier_) return;
    notifier_ = _notifier;
    if(notifierSave) {
-      notifierSave->deleteNotifiee(this);
+	  notifierSave->deleteNotifiee(this);
    }
    if(_notifier) {
-      _notifier->newNotifiee(this);
+	  _notifier->newNotifiee(this);
    }
    if(isNonReferencing_) {
-      if(notifierSave) notifierSave->newRef();
-      if(notifier_) notifier_->deleteRef();
+	  if(notifierSave) notifierSave->newRef();
+	  if(notifier_) notifier_->deleteRef();
    }
 }
 
 Customer::NotifieeConst::~NotifieeConst() {
    if(notifier_) {
-      notifier_->deleteNotifiee(this);
+	  notifier_->deleteNotifiee(this);
    }
    if(notifier_&&isNonReferencing()) notifier_->newRef();
 }
@@ -1202,20 +1160,20 @@ Network::NotifieeConst::notifierIs(const Network::PtrConst& _notifier) {
    if(_notifier==notifier_) return;
    notifier_ = _notifier;
    if(notifierSave) {
-      notifierSave->deleteNotifiee(this);
+	  notifierSave->deleteNotifiee(this);
    }
    if(_notifier) {
-      _notifier->newNotifiee(this);
+	  _notifier->newNotifiee(this);
    }
    if(isNonReferencing_) {
-      if(notifierSave) notifierSave->newRef();
-      if(notifier_) notifier_->deleteRef();
+	  if(notifierSave) notifierSave->newRef();
+	  if(notifier_) notifier_->deleteRef();
    }
 }
 
 Network::NotifieeConst::~NotifieeConst() {
    if(notifier_) {
-      notifier_->deleteNotifiee(this);
+	  notifier_->deleteNotifiee(this);
    }
    if(notifier_&&isNonReferencing()) notifier_->newRef();
 }

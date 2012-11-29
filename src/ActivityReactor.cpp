@@ -1,4 +1,5 @@
 #include "ActivityReactor.h"
+#include "Engine.h"
 
 void InjectActivityReactor::onStatus() {
     switch (activity_->status()) {

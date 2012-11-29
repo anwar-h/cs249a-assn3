@@ -47,5 +47,5 @@ test1.o: test1.cpp $(OBJECTS)
 example.o: example.cpp $(REP_LAYER)
 example2.o: example2.cpp $(REP_LAYER)
 client.o: client.cpp $(REP_LAYER)
-ActivityImpl.o: ActivityImpl.h ActivityImpl.cpp
-ActivityReactor.o: ActivityReactor.h ActivityReactor.cpp ActivityImpl.o
+ActivityImpl.o: ActivityImpl.h ActivityImpl.cpp Engine.h
+ActivityReactor.o: ActivityReactor.h ActivityReactor.cpp ActivityImpl.o Engine.h
