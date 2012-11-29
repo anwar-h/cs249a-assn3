@@ -76,8 +76,8 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	seg0->attribute("length", "50");
-	seg1->attribute("Capacity", "30");
+	seg0->attributeIs("length", "50");
+	seg1->attributeIs("Capacity", "30");
 
 	for(size_t i = 0; i < segs10.size(); i ++){
 		segs10[i]->attributeIs("length", "100");

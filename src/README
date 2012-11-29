@@ -3,8 +3,18 @@ user:ahahn
 
 
 DESCRIPTION
+
+PART 1:
 Exception Handling:
 In Assignment 2, we already put in exceptions in all of our ADTs, for if someone tried to assign an out-of-bounds value to them.  In addition to those exceptions, we added a little bit more exception handling to the rep layer, to warn the user of incorrect input instead of failing silently.
+
+PART 2:
+Activities:
+We set up an activity manager to control the time of the simulation.
+
+PART 3:
+Shipment Transfers:
+
 
 Routing:
 We implemented BFS and Dijkstra.  BFS finds the route that takes the shortest number of steps, and Dijkstra finds the route with the shortest distance.  Dijkstra could easily be modified to optimize for time or cost, but that would involve some day/night calculations and optimizations, so we chose to go with the simplest approach.

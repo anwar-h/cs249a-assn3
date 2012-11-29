@@ -975,6 +975,7 @@ public:
 	static inline RoutingMethod dijkstra() { return dijkstra_; }
 	static inline RoutingMethod bfs() { return bfs_; }
 
+	
 	void constraintsActiveIs(int mask);
 	void constraintsActiveDel();
 	int constraintsActive() const { return mask_; }
@@ -1053,12 +1054,25 @@ public:
 		return m;
 	}
 
+	enum SimulationStatus {off_, running_};
+	static inline SimulationStatus off(){ return off_;}
+	static inline SimulationStatus running(){ return running_;}
+
+	SimulationStatus simulationStatus() const{
+		return simulation_status_;
+	}
+	void simulationStatusIs( SimulationStatus s){
+		simulation_status_ = s;
+	}
+	
+
 protected:	
 	Connectivity(Fwk::String name):
 		Fwk::NamedInterface(name),
 		expedited_(Segment::expediteNotSupported()),
 		mask_(0),
-		routing_method_(dijkstra())
+		routing_method_(dijkstra()),
+		simulation_status_(off())
 		{
 			//SHOULD NOT BE INITIALIZED HERE, AS LOCS MAY CHANGE BEFORE ANYTHING HAPPENS!
 			routes_dijkstra_ = routes(dijkstra());
@@ -1082,9 +1096,9 @@ protected:
 	Dollars cost_;
 	Hours hours_;
 	RoutingMethod routing_method_;
+	SimulationStatus simulation_status_;
 	map<string, Path::Ptr> routes_dijkstra_;
 	map<string, Path::Ptr> routes_bfs_;
-	//TODO: ADD OTHER PREPROCESS MAPS HERE
 	
 };
 
