@@ -174,13 +174,24 @@ void
 Location::LocationReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
-	if (notifier()->locationType() == customer() &&
-		shipment->dest()->name() == notifier()->name()) {
-		//at destination
-		Customer *thisPtr = dynamic_cast<Customer*>(notifier().ptr());
-		thisPtr->shipmentsReceivedIs(ShipmentCount(thisPtr->shipmentsReceived().value() + 1));
-		thisPtr->totalLatencyInc(shipment->latency());
-		//record statistics
+	LocationType locationType = notifier()->locationType();
+	string destinationName = shipment->dest()->name();
+	string sourceName = shipment->source()->name();
+
+	if (locationType == Location::customer() && sourceName != notifier()->name()) {
+		Statistics::Ptr stats = const_cast<Statistics*>(networkInstance()->statistics().ptr());
+		
+		if (destinationName == notifier()->name()) {
+			//at destination
+			Customer *thisPtr = dynamic_cast<Customer*>(notifier().ptr());
+			thisPtr->shipmentsReceivedIs(ShipmentCount(thisPtr->shipmentsReceived().value() + 1));
+			thisPtr->totalLatencyInc(shipment->latency());
+			stats->deliveredShipmentIs(shipment);
+		}
+		else {
+			// DROP SHIPMENT
+			stats->droppedShipmentIs(shipment);
+		}
 	}
 	else {
 		Segment::Ptr segment;
@@ -1292,6 +1303,22 @@ Statistics::onTerminalDel(Terminal::Ptr terminal)
 {
 	Segment::Mode type = terminal->vehicleType();
 	numTerminalsIs(type, numTerminals(type) - 1);
+}
+
+void
+Statistics::deliveredShipmentIs(Shipment::Ptr shipment)
+{
+	map<string, ShippingRecord>::iterator found = shipmentRecords_.find(shipment->name());
+	found->second.numEnRouteInc(-1);
+	found->second.numDeliveredInc();
+}
+
+void
+Statistics::droppedShipmentIs(Shipment::Ptr shipment)
+{
+	map<string, ShippingRecord>::iterator found = shipmentRecords_.find(shipment->name());
+	found->second.numEnRouteInc(-1);
+	found->second.numDroppedInc();	
 }
 
 void

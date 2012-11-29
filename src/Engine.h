@@ -1071,7 +1071,7 @@ public:
 	void routingMethodIs(RoutingMethod rm) {
 		routing_method_ = rm;
 	}
-	Path::PtrConst shipmentPath(const string &s) const{
+	Path::PtrConst shipmentPath(const string &s) const {
 		map<string, Path::Ptr>::const_iterator it;
 		Path::Ptr p;
 
@@ -1331,31 +1331,22 @@ public:
 		int record[3];
 
 		void numEnRouteInc(int n = 1) { record[enroute_] += n; }
-		void numDeliveredInc(int n = 1) {record[delivered_] += n; }
-		void numDroppedInc(int n = 1) {record[dropped_] += n; }
+		void numDeliveredInc(int n = 1) { record[delivered_] += n; }
+		void numDroppedInc(int n = 1) { record[dropped_] += n; }
 
 		size_t numEnRoute() { return record[enroute_]; }
 		size_t numDelivered() { return record[delivered_]; }
 		size_t numDropped() { return record[dropped_]; }
 	};
 
-	size_t numCustomers() {
-		return numCustomers_;
-	}
-
-	size_t numPorts() {
-		return numPorts_;
-	}
-	
-	size_t numTerminals(Segment::Mode mode) {
-		return numTerminals_[mode];
-	}
-
-	size_t numSegments(Segment::Mode mode) {
-		return numSegments_[mode];
-	}
-
+	size_t numCustomers() { return numCustomers_; }
+	size_t numPorts() { return numPorts_; }
+	size_t numTerminals(Segment::Mode mode) { return numTerminals_[mode]; }
+	size_t numSegments(Segment::Mode mode) { return numSegments_[mode]; }
 	size_t numShipments() { return numShipments_; }
+
+	void deliveredShipmentIs(Shipment::Ptr shipment);
+	void droppedShipmentIs(Shipment::Ptr shipment);
 
 	float percentExpeditedSegments();
 	
