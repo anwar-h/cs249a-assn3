@@ -944,14 +944,16 @@ class InjectActivityReactor : public Activity::Notifiee {
 public:
 	void onStatus();
 
-	InjectActivityReactor(Fwk::Ptr<Activity::Manager> manager, Activity *activity, double rate):
+	InjectActivityReactor(Fwk::Ptr<Activity::Manager> manager, Activity *activity, Customer *customer, double rate):
 		Notifiee(activity),
+		customer_(customer),
 		rate_(rate),
 		activity_(activity),
 		manager_(manager)
 		{}
 
 protected:
+	Customer::Ptr customer_;
 	double rate_;
 	Activity::Ptr activity_;
 	Fwk::Ptr<Activity::Manager> manager_;
@@ -961,14 +963,17 @@ class ForwardActivityReactor : public Activity::Notifiee {
 public:
 	void onStatus();
 
-	ForwardActivityReactor(Fwk::Ptr<Activity::Manager> manager, Activity *activity, Shipment *shipment):
+	ForwardActivityReactor(Fwk::Ptr<Activity::Manager> manager, Activity *activity,
+						Segment *segment, Shipment *shipment):
 		Notifiee(activity),
+		segment_(segment),
 		shipment_(shipment),
 		activity_(activity),
 		manager_(manager)
 		{}
 
 protected:
+	Segment::Ptr segment_;
 	Shipment::Ptr shipment_;
 	Activity::Ptr activity_;
 	Fwk::Ptr<Activity::Manager> manager_;
