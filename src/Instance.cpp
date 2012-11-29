@@ -633,15 +633,15 @@ string FleetRep::attribute(const string& name){
     if (property=="speed"){
         return (fleet_ -> speed(m)).stringValue();
     }else if (property=="speed day"){
-        return (fleet_ -> speed(m, Fleet::day()).stringValue();
+        return (fleet_ -> speed(m, Fleet::day()).stringValue());
     }else if (property == "speed night"){
-        return (fleet_ -> speed(m, Fleet::night()).stringValue();
+        return (fleet_ -> speed(m, Fleet::night()).stringValue());
     }
 
     else if (property == "cost"){
         return fleet_ -> costPerMile(m).stringValue();
     }else if (property == "cost day"){
-        return fleet_ -> costPerMile(m, Fleet::day()).stringValue();
+        return fleet_ -> costPerMile(m, Fleet::day()).stringValue());
     }else if (property == "cost night"){
         return fleet_ -> costPerMile(m, Fleet::night()).stringValue();
     }
@@ -649,9 +649,9 @@ string FleetRep::attribute(const string& name){
     else if (property== "capacity"){
         return fleet_ -> capacity(m).stringValue();
     }else if (property == "capacity day"){
-        return fleet_ -> capacity(m, Fleet::day()).stringValue();
-    }else if (propert == "capacity night"){
-        return fleet_ -> capacity(m, Fleet::night()).stringValue();
+        return fleet_ -> capacity(m, Fleet::day()).stringValue());
+    }else if (property == "capacity night"){
+        return fleet_ -> capacity(m, Fleet::night()).stringValue());
     }
 
     else{

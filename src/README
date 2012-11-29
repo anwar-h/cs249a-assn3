@@ -32,5 +32,8 @@ The real time activity manager behaves very similarly to the sample one we were 
 Routing:
 We use a static variable in the activity reactor to track if nowIs has been called before (ie if the simulation has started).  If this is the first time nowIs is called, we preprocess all the locations and segments in the network to find all the best routes.  We implemented BFS and Dijkstra.  BFS finds the route that takes the shortest number of steps, and Dijkstra finds the route with the shortest distance.  Dijkstra could easily be modified to optimize for time or cost, but that would involve some day/night calculations and optimizations, so we chose to go with the simplest approach.
 
+Different times of day:
+Our fleet stores 2 different values for each of its attributes.  This is still compatible with Assignment 2.  When a user says fleet->attribute("speed") it returns the current speed, but when they say fleet->attribute("speed night") it returns the speed at night.  A user can set both day and night speed by saying fleet->attribute("speed", "10"), but when they say fleet->attributeIs("speed day", "10") that will only set the day speed.  We implemented this using activities that change the fleet timeOfDay attribute every 12 hours starting at 8am.
+
   
 
