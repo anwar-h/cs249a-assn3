@@ -632,11 +632,29 @@ string FleetRep::attribute(const string& name){
 
     if (property=="speed"){
         return (fleet_ -> speed(m)).stringValue();
-    }else if (property == "cost"){
+    }else if (property=="speed day"){
+        return (fleet_ -> speed(m, Fleet::day()).stringValue();
+    }else if (property == "speed night"){
+        return (fleet_ -> speed(m, Fleet::night()).stringValue();
+    }
+
+    else if (property == "cost"){
         return fleet_ -> costPerMile(m).stringValue();
-    }else if (property== "capacity"){
+    }else if (property == "cost day"){
+        return fleet_ -> costPerMile(m, Fleet::day()).stringValue();
+    }else if (property == "cost night"){
+        return fleet_ -> costPerMile(m, Fleet::night()).stringValue();
+    }
+
+    else if (property== "capacity"){
         return fleet_ -> capacity(m).stringValue();
-    }else{
+    }else if (property == "capacity day"){
+        return fleet_ -> capacity(m, Fleet::day()).stringValue();
+    }else if (propert == "capacity night"){
+        return fleet_ -> capacity(m, Fleet::night()).stringValue();
+    }
+
+    else{
         cerr<<"bad input"<<endl;
         return "";
     }
@@ -662,18 +680,58 @@ void FleetRep::attributeIs(const string& name, const string& v) {
         float f = atof(v.c_str());
         if (f < 0) return;
         MilesPerHour mph = MilesPerHour(f);
-        fleet_ -> speedIs(m, mph);
-    }else if (property == "cost"){
+        fleet_ -> speedIs(m, mph, Fleet::day());
+        fleet_ -> speedIs(m, mph, Fleet::night());
+    }else if(property=="speed day"){
+        float f = atof(v.c_str());
+        if (f < 0) return;
+        MilesPerHour mph = MilesPerHour(f);
+        fleet_ -> speedIs(m, mph, Fleet::day());
+    }else if(property=="speed night"){
+        float f = atof(v.c_str());
+        if (f < 0) return;
+        MilesPerHour mph = MilesPerHour(f);
+        fleet_ -> speedIs(m, mph, Fleet::night());
+    }
+
+    else if (property == "cost"){
         float f = atof(v.c_str());
         if (f < 0) return;
         Dollars d = Dollars(f);
-        fleet_ -> costPerMileIs(m, d);
-    }else if (property== "capacity"){
+        fleet_ -> costPerMileIs(m, d, Fleet::day());
+        fleet_ -> costPerMileIs(m, d, Fleet::night());
+    }else if (property == "cost day"){
+        float f = atof(v.c_str());
+        if (f < 0) return;
+        Dollars d = Dollars(f);
+        fleet_ -> costPerMileIs(m, d, Fleet::day());
+    }else if (property == "cost night"){
+        float f = atof(v.c_str());
+        if (f < 0) return;
+        Dollars d = Dollars(f);
+        fleet_ -> costPerMileIs(m, d, Fleet::night());
+    }
+
+    else if (property== "capacity"){
         int c = atoi(v.c_str());
         if (c < 0) return;
         PackageCount p = PackageCount(c);
-        fleet_ -> capacityIs(m, p);
-    }else{
+        fleet_ -> capacityIs(m, p, Fleet::day());
+        fleet_ -> capacityIs(m, p, Fleet::night());
+    }else if (property == "capacity day"){
+        int c = atoi(v.c_str());
+        if (c < 0) return;
+        PackageCount p = PackageCount(c);
+        fleet_ -> capacityIs(m, p, Fleet::day());
+    }else if (property == "capacity night"){
+        int c = atoi(v.c_str());
+        if (c < 0) return;
+        PackageCount p = PackageCount(c);
+        fleet_ -> capacityIs(m, p, Fleet::night());
+    }
+
+
+    else{
         cerr <<"tried to set fleet attribute '" << mode << "' to '" << property <<"'"<< endl;
         throw Fwk::AttributeNotSupportedException(name);
     }
