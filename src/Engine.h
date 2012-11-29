@@ -1093,7 +1093,11 @@ public:
 	SimulationStatus simulationStatus() const{
 		return simulation_status_;
 	}
-	void simulationStatusIs( SimulationStatus s){
+	void simulationStatusIs(SimulationStatus s){
+		if(simulation_status_ == off() && s == running()){ //simulation is starting
+			routes_dijkstra_ = routes(dijkstra());
+			routes_bfs_ = routes(bfs());
+		}
 		simulation_status_ = s;
 	}
 	
@@ -1105,11 +1109,7 @@ protected:
 		mask_(0),
 		routing_method_(dijkstra()),
 		simulation_status_(off())
-		{
-			//SHOULD NOT BE INITIALIZED HERE, AS LOCS MAY CHANGE BEFORE ANYTHING HAPPENS!
-			routes_dijkstra_ = routes(dijkstra());
-			routes_bfs_ = routes(bfs());
-		}
+		{}
 
 	bool isValidExplorePath(Path::Ptr path) const;
 	bool isValidExplorePathNotExpedited(Path::Ptr one, Path::Ptr two) const;

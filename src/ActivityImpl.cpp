@@ -60,6 +60,8 @@ namespace ActivityImpl {
 
 		if (!beenHere) {
 			beenHere = true;
+			Shipping::Connectivity::Ptr c = const_cast<Shipping::Connectivity*>(Shipping::networkInstance()->connectivity().ptr());
+			c->simulationStatusIs(Shipping::Connectivity::running());
 			// preprocess code here
 		}
 		//find the most recent activites to run and run them in order
