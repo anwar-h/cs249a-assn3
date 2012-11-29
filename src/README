@@ -13,11 +13,24 @@ Activities:
 We set up an activity manager to control the time of the simulation.
 
 PART 3:
+Inject Activities:
+We create a customer location, which also creates a customer reactor.  The call to construct location (which is the base class for customer) creates a location reactor.  The customer reactor stores a pointer to the activity manager and its purpose is to check to see if all 3 attributes have been set on the customer (transfer rate (>0), shipment size(>0), and destination), and once they have it creates a new inject activity reactor and an associated activity for that location.  We calculate the time between shipments based on the transfer rate, and the inject activity reactor creates a new shipment every time that amount of time passes.  We then call arrivingShipmentIs on the customer, passing in this new shipment.
+
+The shipment needs to know its source, destination, and shipment size (in # of packages).  It looks up its path in our precomputed table of paths and stores that as well.  We create a new shipment with Network::shipmentNew(), which notifies Statistics.  Statistics tracks these shipments and updates statistics about them.  It tracks the number of shipments sent from a given customer to any other customer that have been created, are en route, or have been dropped.
+
+
+
+The locationreactor has an onShipmentArrival function which checks whether a shipment is arriving at its source (in which case we forward it along), its destination (in which case the shipment has been delivered, so we update stats and celebrate), a random other customer (TODO:  ACTIONS TBD), or a port or terminal (in which case we forward it along).
+
+In order to forward a shipment along, we need to find the correct segment to put that shipment on.
+
+
 Shipment Transfers:
 
 
+
 Routing:
-We implemented BFS and Dijkstra.  BFS finds the route that takes the shortest number of steps, and Dijkstra finds the route with the shortest distance.  Dijkstra could easily be modified to optimize for time or cost, but that would involve some day/night calculations and optimizations, so we chose to go with the simplest approach.
+We use a static variable in the activity reactor to track if nowIs has been called before (ie if the simulation has started).  If this is the first time nowIs is called, we preprocess all the locations and segments in the network to find all the best routes.  We implemented BFS and Dijkstra.  BFS finds the route that takes the shortest number of steps, and Dijkstra finds the route with the shortest distance.  Dijkstra could easily be modified to optimize for time or cost, but that would involve some day/night calculations and optimizations, so we chose to go with the simplest approach.
 
   
 
