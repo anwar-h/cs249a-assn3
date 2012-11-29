@@ -18,11 +18,11 @@ We create a customer location, which also creates a customer reactor.  The call 
 
 The shipment needs to know its source, destination, and shipment size (in # of packages).  It looks up its path in our precomputed table of paths and stores that as well.  We create a new shipment with Network::shipmentNew(), which notifies Statistics.  Statistics tracks these shipments and updates statistics about them.  It tracks the number of shipments sent from a given customer to any other customer that have been created, are en route, or have been dropped.
 
-
-
 The locationreactor has an onShipmentArrival function which checks whether a shipment is arriving at its source (in which case we forward it along), its destination (in which case the shipment has been delivered, so we update stats and celebrate), a random other customer (TODO:  ACTIONS TBD), or a port or terminal (in which case we forward it along).
 
-In order to forward a shipment along, we need to find the correct segment to put that shipment on.
+In order to forward a shipment along, we need to find the correct segment to put that shipment on.  We look that up, and call arrivingShipmentIs on the corresponding segment.  The segment then checks whether it has space for that shipment by looking up its vehiclecount and the fleet's capacity for vehicles of its type.  If the current load of the segment + the size of this shipment < vehiclecount*vehicle capacity, then we increase the load on this segment, calculate how long it will take for these packages to cross, and schedule a forwarding activity for time (now + time to cross).  So at that next time, arrivingShipmentIs will be called on the next location in the path.  That location checks if it's the destination, and if so then yay!  If not, it passes it off to the next segment as described above.
+
+If there isn't enough space in the segment for this shipment, segment::arrivingshipmentis throws an exception, which pops us back up to locationReactor onShipmentArrival.  The locationReactor handles the exception by creating a retry activity.  The wait time starts out at 0.1 hours, the retry activity calls onShipmentArrival on the segment again. If that fails and an exception is thrown, which we handly by doing nothing, as the retry activity will just double its wait time automatically. Every time this retry activity tries and fails to resend the shipment, it doubles its wait time.  We continue doing this until we have waited for a day, at which point we drop the shipment.
 
 
 Shipment Transfers:

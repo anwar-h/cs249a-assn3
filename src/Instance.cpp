@@ -331,7 +331,7 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
         int c = atoi(v.c_str());
         if (c < 0) return;
         VehicleCount count = VehicleCount(c);
-        segment_->capacityIs(count);
+        segment_->numVehiclesIs(count);
 
     }
     else if (name == "expedite support"){
