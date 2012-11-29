@@ -120,7 +120,7 @@ Segment::SegmentReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
 	Activity::Ptr activity = activityManager_->activityNew("Forwarding");
-	activity->lastNotifieeIs( new ForwardActivityReactor(activityManager_, activity.ptr(), shipment.ptr()) );
+	activity->lastNotifieeIs( new ForwardActivityReactor(activityManager_, activity.ptr(), notifier().ptr(), shipment.ptr()) );
 	Segment::Ptr seg = notifier();
 	Fleet::PtrConst fleet = networkInstance()->fleet();
 	Time timeToTraverse = Time(seg->length().value() / fleet->speed(seg->mode()).value());
@@ -262,14 +262,11 @@ void InjectActivityReactor::onStatus() {
 void ForwardActivityReactor::onStatus() {
     switch (activity_->status()) {
 	    case Activity::executing:
-			//I am executing now
-
+	    	Location::Ptr next = segment_->returnSegment()->source();
+	    	next->arrivingShipmentIs(shipment_);
 			break;
 	
 	    case Activity::free:
-			//When done, automatically enqueue myself for next execution
-			//activity_->nextTimeIs(Time(activity_->nextTime().value()));
-			//activity_->statusIs(Activity::nextTimeScheduled);
 			break;
 
 	    case Activity::nextTimeScheduled:
@@ -352,8 +349,8 @@ Customer::NotifieeConst::~NotifieeConst() {
 bool
 Customer::CustomerReactor::customerIsReady() const
 {
-	if (attributesSet_[transferRate_] &&
-		attributesSet_[shipmentSize_] &&
+	if (attributesSet_[transferRate_] && transferRate_.value() > 0 &&
+		attributesSet_[shipmentSize_] && shipmentSize_.value() > 0 &&
 		attributesSet_[dest_]) {
 		return true;
 	}
@@ -396,7 +393,7 @@ Customer::CustomerReactor::InjectActivityReactorNew()
 	else return;
 
 	Activity::Ptr activity = activityManager_->activityNew("Inject");
-	activity->lastNotifieeIs( new InjectActivityReactor(activityManager_, activity.ptr(), 24.0) );
+	activity->lastNotifieeIs( new InjectActivityReactor(activityManager_, activity.ptr(), notifier().ptr(), 24.0 / (double) transferRate_.value()) );
 	activity->nextTimeIs(activityManager_->now().value());
 	activity->statusIs(Activity::nextTimeScheduled);
 }
