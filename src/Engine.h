@@ -13,7 +13,6 @@
 #include "Instance.h"
 #include "Nominal.h"
 #include "ActivityImpl.h"
-#include "ActivityReactor.h"
 #include <string>
 #include <sstream>
 #include <vector>
@@ -518,39 +517,6 @@ protected:
 	LocationReactor::Ptr locationReactor_;
 };
 
-class RetryActivityReactor : public Activity::Notifiee {
-public:
-	void onStatus();
-
-	static const double MAX_WAIT = 24.0;
-	static const double WAIT_MULTIPLE = 2.0;
-
-	RetryActivityReactor(Fwk::Ptr<Activity::Manager> manager,
-				Activity *activity, Shipment *shipment,
-				Segment *segment):
-		Notifiee(activity),
-		successfullyForwardedShipment_(false),
-		totalTimeWaiting_(0.0),
-		wait_(0.1),
-		shipment_(shipment),
-		segment_(segment),
-		activity_(activity),
-		manager_(manager)
-		{}
-
-	double wait() { return wait_; }
-
-protected:
-	bool successfullyForwardedShipment_;
-	double totalTimeWaiting_;
-	double wait_;
-	Fwk::Ptr<Shipment> shipment_;
-	Fwk::Ptr<Segment> segment_;
-	Activity::Ptr activity_;
-	Fwk::Ptr<Activity::Manager> manager_;
-};
-
-
 class Customer : public Location {
 public:
 	typedef Fwk::Ptr<Customer> Ptr;
@@ -940,6 +906,72 @@ protected:
 	PackageCount load_;
 	Path::PtrConst path_;
 	Hours latency_;
+};
+
+class RetryActivityReactor : public Activity::Notifiee {
+public:
+	void onStatus();
+
+	static const double MAX_WAIT = 24.0;
+	static const double WAIT_MULTIPLE = 2.0;
+
+	RetryActivityReactor(Fwk::Ptr<Activity::Manager> manager,
+				Activity *activity, Shipment *shipment,
+				Segment *segment):
+		Notifiee(activity),
+		successfullyForwardedShipment_(false),
+		totalTimeWaiting_(0.0),
+		wait_(0.1),
+		shipment_(shipment),
+		segment_(segment),
+		activity_(activity),
+		manager_(manager)
+		{}
+
+	double wait() { return wait_; }
+
+protected:
+	bool successfullyForwardedShipment_;
+	double totalTimeWaiting_;
+	double wait_;
+	Fwk::Ptr<Shipment> shipment_;
+	Fwk::Ptr<Segment> segment_;
+	Activity::Ptr activity_;
+	Fwk::Ptr<Activity::Manager> manager_;
+};
+
+class InjectActivityReactor : public Activity::Notifiee {
+public:
+	void onStatus();
+
+	InjectActivityReactor(Fwk::Ptr<Activity::Manager> manager, Activity *activity, double rate):
+		Notifiee(activity),
+		rate_(rate),
+		activity_(activity),
+		manager_(manager)
+		{}
+
+protected:
+	double rate_;
+	Activity::Ptr activity_;
+	Fwk::Ptr<Activity::Manager> manager_;
+	
+};
+class ForwardActivityReactor : public Activity::Notifiee {
+public:
+	void onStatus();
+
+	ForwardActivityReactor(Fwk::Ptr<Activity::Manager> manager, Activity *activity, Shipment *shipment):
+		Notifiee(activity),
+		shipment_(shipment),
+		activity_(activity),
+		manager_(manager)
+		{}
+
+protected:
+	Shipment::Ptr shipment_;
+	Activity::Ptr activity_;
+	Fwk::Ptr<Activity::Manager> manager_;
 };
 
 
