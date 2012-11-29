@@ -11,6 +11,7 @@
 
 
 #include <iostream>
+#include <sstream>
 #include <vector>
 #include "Instance.h"
 #include "ActivityImpl.h"
@@ -23,17 +24,86 @@ int main(int argc, char *argv[]) {
     Ptr<Instance::Manager> manager = shippingInstanceManager();
 
 	/* Set up the network */
-	vector< Ptr<Instance> > loc;
-	vector< Ptr<Instance> > seg;
+	vector< Ptr<Instance> > sources;
+	vector< Ptr<Instance> > terminals;
+	vector< Ptr<Instance> > segs1;
+	vector< Ptr<Instance> > segs10;
+	vector< Ptr<Instance> > segs100;
 
 	// Locations
-    loc.push_back( manager->instanceNew("destcustomer", "Customer") );
+    Ptr<Instance> dest = manager->instanceNew("destcustomer", "Customer");
+	Ptr<Instance> hub = manager->instanceNew("termhub", "Truck terminal");
+	
+
+	Ptr<Instance> seg0 = manager->instanceNew("seg0", "Truck segment");
+	Ptr<Instance> seg1 = manager->instanceNew("seg1", "Truck segment");
+	seg0->attributeIs("source", "destcustomer");
+	seg1->attributeIs("source", "termhub");
+	seg0->attributeIs("return segment", "seg1");
 
 
+
+	for(int i = 0; i < 10; i++){
+		stringstream tname;
+		tname << "t" << i;
+		terminals.push_back( manager->instanceNew(tname.str(), "Truck terminal") );
+		stringstream sname0, sname1;
+		sname0 << "s" << i * 2;
+		sname1 << "s" << i * 2 + 1;
+
+
+		segs10.push_back(manager->instanceNew(sname0.str(), "Truck segment"));
+		segs10.push_back( manager->instanceNew(sname1.str(), "Truck segment"));
+		segs10[i*2]->attributeIs("source", "termhub");
+		segs10[i*2 + 1]->attributeIs("source", tname.str());
+		segs10[i*2]->attributeIs("return segment", sname1.str());
+		
+
+		for (int j = 0; j < 10; j++){
+			stringstream cname;
+			cname << "scust"<< j + i * 20;
+			sources.push_back( manager->instanceNew(cname.str(), "Customer") );
+			
+			stringstream ssname0, ssname1;
+			ssname0 << "sg" << i * 20 + j * 2;
+			ssname1 << "sg" << i * 20 + j * 2 + 1;
+
+			segs100.push_back(manager->instanceNew(ssname0.str(), "Truck segment"));
+			segs100.push_back(manager->instanceNew(ssname1.str(), "Truck segment"));
+			segs100[i*20 + j*2]->attributeIs("source", tname.str());
+			segs100[i*20 + j*2 + 1]->attributeIs("source", cname.str());
+			segs100[i*20 + j*2]->attributeIs("return segment", ssname1.str());		
+		}
+	}
+
+	seg0->attribute("length", "50");
+	seg1->attribute("Capacity", "30");
+
+	for(size_t i = 0; i < segs10.size(); i ++){
+		segs10[i]->attributeIs("length", "100");
+		segs10[i]->attributeIs("Capacity", "20");
+	}
+	for(size_t i = 0; i < segs100.size(); i++){
+		segs100[i]->attributeIs("length", "200");
+		segs100[i]->attributeIs("Capacity", "20");
+	}
+
+/*	cout << sources.size() << " sources" << endl;
+	cout << terminals.size() << " terminals" << endl;
+	cout << segs10.size() << " segments in the row of 10" << endl;
+	cout << segs100.size() << " segments in the row of 100" << endl;
+*/
+//	
+/*	cout << seg0->attribute("return segment")<<endl;
+	for(int i = 0; i < segs10.size(); i ++){
+		cout<<segs10[i]->attribute("return segment")<<endl;
+	}
+    for(int i = 0; i < segs100.size(); i++){
+    	cout<<segs100[i]->attribute("return segment")<<endl;
+    }
+*/
 
 /*
-
-
     loc.push_back( manager->instanceNew("customer2", "Customer") );
     loc.push_back( manager->instanceNew("port1", "Port") );
     loc.push_back( manager->instanceNew("tt1", "Truck terminal") );
