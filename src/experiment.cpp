@@ -30,10 +30,13 @@ int main(int argc, char *argv[]) {
 	vector< Ptr<Instance> > segs10;
 	vector< Ptr<Instance> > segs100;
 
-	// Locations
+	Ptr<Instance> fleet = manager->instanceNew("fleet");
+	fleet->attributeIs("truck speed", "20");
+
+
     Ptr<Instance> dest = manager->instanceNew("destcustomer", "Customer");
 	Ptr<Instance> hub = manager->instanceNew("termhub", "Truck terminal");
-	
+
 
 	Ptr<Instance> seg0 = manager->instanceNew("seg0", "Truck segment");
 	Ptr<Instance> seg1 = manager->instanceNew("seg1", "Truck segment");
@@ -79,6 +82,8 @@ int main(int argc, char *argv[]) {
 	seg0->attributeIs("length", "50");
 	seg1->attributeIs("Capacity", "30");
 
+
+
 	for(size_t i = 0; i < segs10.size(); i ++){
 		segs10[i]->attributeIs("length", "100");
 		segs10[i]->attributeIs("Capacity", "20");
@@ -86,6 +91,13 @@ int main(int argc, char *argv[]) {
 	for(size_t i = 0; i < segs100.size(); i++){
 		segs100[i]->attributeIs("length", "200");
 		segs100[i]->attributeIs("Capacity", "20");
+	}
+
+
+
+	//Set shipment stuff:
+	for(int i = 0; i < sources.size(); i ++){
+		sources[i]->attribute("Destination")
 	}
 
 /*	cout << sources.size() << " sources" << endl;
