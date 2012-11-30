@@ -168,6 +168,7 @@ public:
 
 class Shipment; // forward declared
 class Location; // forward declared
+class Network; // forward declared
 class Segment : public Fwk::NamedInterface {
 public:
 	typedef Fwk::Ptr<Segment> Ptr;
@@ -299,27 +300,29 @@ public:
 
 		void onShipmentArrival(Fwk::Ptr<Shipment> &shipment);
 
-		static SegmentReactor::Ptr SegmentReactorNew(const Segment::Ptr &notifier) {
-			Ptr m = new SegmentReactor(notifier);
+		static SegmentReactor::Ptr SegmentReactorNew(const Segment::Ptr &notifier, Network *network) {
+			Ptr m = new SegmentReactor(notifier, network);
 			m->referencesDec(1);
 			return m;
 		}
 
 	protected:
-		SegmentReactor(const Segment::Ptr &notifier):
+		SegmentReactor(const Segment::Ptr &notifier, Network *network):
 			Segment::Notifiee(),
-			activityManager_(activityManagerInstance())
+			network_(network),
+			activityManager_(activityManagerInstance(network))
 			{
 				notifierIs(notifier);
 			}
 
+		Network *network_;
 		Activity::Manager::Ptr activityManager_;
 	};
 
 	void segmentReactorIs(SegmentReactor::Ptr reactor) { segmentReactor_ = reactor.ptr(); }
-	static Segment::Ptr SegmentNew(Fwk::String name, Mode mode) {
-		Ptr m = new Segment(name, mode);
-		m->segmentReactorIs( SegmentReactor::SegmentReactorNew(m.ptr()) );
+	static Segment::Ptr SegmentNew(Fwk::String name, Mode mode, Network *network) {
+		Ptr m = new Segment(name, mode, network);
+		m->segmentReactorIs( SegmentReactor::SegmentReactorNew(m.ptr(), network) );
 		m->referencesDec(1);
 		// decr. refer count to compensate for initial val of 1
 		return m;
@@ -331,7 +334,7 @@ public:
 	U32 notifiees() const { return notifiee_.members(); }
 
 protected:
-	Segment(Fwk::String name, Mode mode);
+	Segment(Fwk::String name, Mode mode, Network *network);
 
 	void newNotifiee(Segment::NotifieeConst *n) const {
 		Segment* me = const_cast<Segment*>(this);
@@ -342,8 +345,10 @@ protected:
 		me->notifiee_.deleteMember(n);
 	}
 	
+
 	NotifieeList notifiee_;
-	SegmentReactor* segmentReactor_;
+	Network *network_;
+	SegmentReactor::Ptr segmentReactor_;
 	Mode mode_;
 	Fwk::Ptr<Location> source_;
 	Mile length_;
@@ -468,29 +473,30 @@ public:
 
 		void onShipmentArrival(Fwk::Ptr<Shipment> &shipment);
 
-		static LocationReactor::Ptr LocationReactorNew(const Location::Ptr &notifier) {
-			Ptr m = new LocationReactor(notifier);
+		static LocationReactor::Ptr LocationReactorNew(const Location::Ptr &notifier, Network *network) {
+			Ptr m = new LocationReactor(notifier, network);
 			m->referencesDec(1);
 			return m;
 		}
 
 	protected:
-		LocationReactor(const Location::Ptr &notifier):
+		LocationReactor(const Location::Ptr &notifier, Network *network):
 			Location::Notifiee(),
-			activityManager_(activityManagerInstance())
+			network_(network),
+			activityManager_(activityManagerInstance(network))
 			{
 				notifierIs(notifier);
 				//cout << "notifier=" << notifier.ptr() << endl;
 				//cout << __FILE__ << ":" << __LINE__ << " LocationReactor()" << endl;
 			}
 
+		Network *network_;
 		Activity::Manager::Ptr activityManager_;
 	};
 
-	void locationReactorIs(LocationReactor::Ptr reactor) { locationReactor_ = reactor.ptr(); }
-	static Location::Ptr LocationNew(Fwk::String name, LocationType location_type) {
-		Ptr m = new Location(name, location_type);
-		m->locationReactorIs( LocationReactor::LocationReactorNew(m.ptr()) );
+	void locationReactorIs(LocationReactor::Ptr reactor) { locationReactor_ = reactor; }
+	static Location::Ptr LocationNew(Fwk::String name, LocationType location_type, Network *network) {
+		Ptr m = new Location(name, location_type, network);		
 		m->referencesDec(1);
 		// decr. refer count to compensate for initial val of 1
 		return m;
@@ -503,12 +509,13 @@ public:
 	U32 notifiees() const { return notifiee_.members(); }
 
 protected:
-	Location(Fwk::String name, LocationType location_type):
+	Location(Fwk::String name, LocationType location_type, Network *network):
 		Fwk::NamedInterface(name),
+		network_(network),
 		location_type_(location_type)
 		{
-			//cout << "location(aka notifier)=" << this << endl;
-			//cout << __FILE__ << ":" << __LINE__ << " Location()" << endl;
+			LocationReactor::Ptr reactor = LocationReactor::LocationReactorNew(this, network_);
+			locationReactorIs(reactor);
 		}
 
 	void newNotifiee(Location::NotifieeConst *n) const {
@@ -532,9 +539,10 @@ protected:
 	}
 	
 	NotifieeList notifiee_;
+	Network *network_;
 	vector<Segment::PtrConst> segments_;
 	LocationType location_type_;
-	LocationReactor* locationReactor_;
+	LocationReactor::Ptr locationReactor_;
 };
 
 class Customer : public Location {
@@ -567,7 +575,9 @@ public:
 		total_latency_ = Hours(total_latency_.value() + l.value());
 	}
 	Hours avgLatency() const{
-		return Hours(total_latency_.value() / shipments_received_.value());
+		if (shipments_received_.value() > 0)
+			return Hours(total_latency_.value() / shipments_received_.value());
+		else return Hours(0);
 	}
 
 	void totalCostInc(Dollars d) { total_cost_ = Dollars(total_cost_.value() + d.value()); }
@@ -633,26 +643,27 @@ public:
 
 	class CustomerReactor : public Customer::Notifiee {
 	public:
-		typedef Fwk::Ptr<CustomerReactor> Ptr;
 		typedef Fwk::Ptr<CustomerReactor const> PtrConst;
-
+		typedef Fwk::Ptr<CustomerReactor> Ptr;
+		
 		void onTransferRate(ShipmentCount transferRate);
 		void onShipmentSize(PackageCount shipmentSize);
 		void onDestination(Customer::Ptr destination);
 
-		static CustomerReactor::Ptr CustomerReactorNew(const Customer::Ptr &notifier) {
-			Ptr m = new CustomerReactor(notifier);
+		static CustomerReactor::Ptr CustomerReactorNew(Network *network) {
+			Ptr m = new CustomerReactor(network);
 			m->referencesDec(1);
 			return m;
 		}
 
 	protected:
-		CustomerReactor(const Customer::Ptr &notifier):
+		CustomerReactor(Network *network):
 			Customer::Notifiee(),
-			activityManager_(activityManagerInstance())
+			network_(network),
+			createdInjectActivityReactor_(false),
+			activityManager_(activityManagerInstance(network))
 			{
-				notifierIs(notifier);
-				attributesSet_[0] = attributesSet_[1] = attributesSet_[2] = 0;
+				attributesSet_[0] = attributesSet_[1] = attributesSet_[2] = false;
 				//cout << __FILE__ << ":" << __LINE__ << " CustomerReactor()" << endl;
 			}
 
@@ -660,18 +671,25 @@ public:
 		bool customerIsReady() const;
 		void InjectActivityReactorNew();
 		
+
+		Network *network_;
+		bool createdInjectActivityReactor_;
 		Activity::Manager::Ptr activityManager_;
-		int attributesSet_[3];
+		bool attributesSet_[3];
 		ShipmentCount transfer_rate_;
 		PackageCount shipment_size_;
 		Customer::Ptr destination_;
 	};
 
-	void customerReactorIs(CustomerReactor::Ptr reactor) { customerReactor_ = reactor.ptr(); }
+	void customerReactorIs(CustomerReactor::Ptr reactor) { customerReactor_ = reactor; }
 
-	static Customer::Ptr CustomerNew(Fwk::String name) {
-		Ptr m = new Customer(name);
-		m->customerReactorIs( CustomerReactor::CustomerReactorNew(m.ptr()) );
+	static Customer::Ptr CustomerNew(Fwk::String name, Network *network) {
+		Ptr m = new Customer(name, network);
+		CustomerReactor::Ptr reactor = CustomerReactor::CustomerReactorNew(network);
+		reactor->notifierIs(m);
+		m->customerReactorIs(reactor);
+//cout << "notifiees()=" << m->notifiees() << " references=" << reactor->references() << endl;
+		
 		m->referencesDec(1);
 		// decr. refer count to compensate for initial val of 1
 		return m;
@@ -683,8 +701,8 @@ public:
 	U32 notifiees() const { return notifiee_.members(); }
 	
 protected:
-	Customer(Fwk::String name):
-		Location(name, Location::customer())
+	Customer(Fwk::String name, Network *network):
+		Location(name, Location::customer(), network)
 		{
 			//cout << __FILE__ << ":" << __LINE__ << " Customer()" << endl;
 		}
@@ -698,7 +716,8 @@ protected:
 		me->notifiee_.deleteMember(n);
 	}
 	
-	CustomerReactor* customerReactor_;
+	CustomerReactor::Ptr customerReactor_;
+	//CustomerReactor::Ptr customerReactor_;
 	NotifieeList notifiee_;
 	ShipmentCount transfer_rate_;
 	PackageCount shipment_size_;
@@ -713,16 +732,16 @@ public:
 	typedef Fwk::Ptr<Port> Ptr;
 	typedef Fwk::Ptr<Port const> PtrConst;
 
-	static Location::Ptr PortNew(Fwk::String name) {
-		Ptr m = new Port(name);
+	static Location::Ptr PortNew(Fwk::String name, Network *network) {
+		Ptr m = new Port(name, network);
 		m->referencesDec(1);
 		// decr. refer count to compensate for initial val of 1
 		return m;
 	}
 
 protected:
-	Port(Fwk::String name):
-		Location(name, Location::port())
+	Port(Fwk::String name, Network *network):
+		Location(name, Location::port(), network)
 		{}
 };
 
@@ -735,16 +754,16 @@ public:
 	void vehicleTypeIs(Segment::Mode m) { vehicle_type_ = m; }
 
 	void segmentIs(const Segment::PtrConst &s);
-	static Location::Ptr TerminalNew(Fwk::String name, Segment::Mode vehicle_type) {
-		Ptr m = new Terminal(name, vehicle_type);
+	static Location::Ptr TerminalNew(Fwk::String name, Segment::Mode vehicle_type, Network *network) {
+		Ptr m = new Terminal(name, vehicle_type, network);
 		m->referencesDec(1);
 		// decr. refer count to compensate for initial val of 1
 		return m;
 	}
 
 protected:
-	Terminal(Fwk::String name, Segment::Mode vehicle_type):
-		Location(name, Location::terminal()),
+	Terminal(Fwk::String name, Segment::Mode vehicle_type, Network *network):
+		Location(name, Location::terminal(), network),
 		vehicle_type_(vehicle_type)
 		{}
 
@@ -830,18 +849,19 @@ public:
 		costs_per_mile_[key(m, tod)] = cpm;
 	}
 
-	static Fleet::Ptr FleetNew(Fwk::String name) {
-		Ptr m = new Fleet(name);
+	static Fleet::Ptr FleetNew(Fwk::String name, Network *network) {
+		Ptr m = new Fleet(name, network);
 		m->referencesDec(1);
 		// decr. refer count to compensate for initial val of 1
 		return m;
 	}
 
 protected:	
-	Fleet(Fwk::String name):
+	Fleet(Fwk::String name, Network *network):
 		Fwk::NamedInterface(name),
+		network_(network),
 		time_of_day_(Fleet::night()),
-		activityManager_(activityManagerInstance())
+		activityManager_(activityManagerInstance(network))
 		{
 			vector<string> keys;
 			keys.push_back(key(Segment::truck(), Fleet::day()));
@@ -869,6 +889,7 @@ protected:
 		return stream.str();
 	}
 
+	Network *network_;
 	map<string, MilesPerHour> speeds_;
 	map<string, PackageCount> capacities_;
 	map<string, Dollars> costs_per_mile_;
@@ -1010,16 +1031,17 @@ public:
 	Hours latency() const { return latency_; }
 	void latencyInc(Hours l) { latency_ = Hours(latency_.value() + l.value()); }
 
-	static Shipment::Ptr ShipmentNew(Customer::Ptr s, Customer::Ptr d, PackageCount p) {
-		Ptr m = new Shipment(s, d, p);
+	static Shipment::Ptr ShipmentNew(Customer::Ptr s, Customer::Ptr d, PackageCount p, Network *network) {
+		Ptr m = new Shipment(s, d, p, network);
 		m->referencesDec(1);
 		// decr. refer count to compensate for initial val of 1
 		return m;
 	}
 
 protected:
-	Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p);
+	Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p, Network *network);
 
+	Network *network_;
 	Customer::Ptr src_;
 	Customer::Ptr dest_;
 	PackageCount load_;
@@ -1036,11 +1058,12 @@ public:
 
 	RetryActivityReactor(Fwk::Ptr<Activity::Manager> manager,
 				Activity *activity, Shipment *shipment,
-				Segment *segment):
+				Segment *segment, Network *network):
 		Notifiee(activity),
+		network_(network),
 		successfullyForwardedShipment_(false),
 		totalTimeWaiting_(0.0),
-		wait_(0.1),
+		wait_( (rand() % 10 + 1) / 10.0),
 		shipment_(shipment),
 		segment_(segment),
 		activity_(activity),
@@ -1050,6 +1073,7 @@ public:
 	double wait() { return wait_; }
 
 protected:
+	Network *network_;
 	bool successfullyForwardedShipment_;
 	double totalTimeWaiting_;
 	double wait_;
@@ -1063,8 +1087,9 @@ class InjectActivityReactor : public Activity::Notifiee {
 public:
 	void onStatus();
 
-	InjectActivityReactor(Fwk::Ptr<Activity::Manager> manager, Activity *activity, Customer *customer, double rate):
+	InjectActivityReactor(Fwk::Ptr<Activity::Manager> manager, Activity *activity, Customer *customer, double rate, Network *network):
 		Notifiee(activity),
+		network_(network),
 		customer_(customer),
 		rate_(rate),
 		activity_(activity),
@@ -1072,6 +1097,7 @@ public:
 		{}
 
 protected:
+	Network *network_;
 	Customer::Ptr customer_;
 	double rate_;
 	Activity::Ptr activity_;
@@ -1205,8 +1231,8 @@ public:
 		return Path::Ptr();
 	}
 
-	static Connectivity::Ptr ConnectivityNew(Fwk::String name) {
-		Ptr m = new Connectivity(name);
+	static Connectivity::Ptr ConnectivityNew(Fwk::String name, Network *network) {
+		Ptr m = new Connectivity(name, network);
 		m->referencesDec(1);
 		return m;
 	}
@@ -1231,8 +1257,9 @@ public:
 	
 
 protected:	
-	Connectivity(Fwk::String name):
+	Connectivity(Fwk::String name, Network *network):
 		Fwk::NamedInterface(name),
+		network_(network),
 		expedited_(Segment::expediteNotSupported()),
 		mask_(0),
 		routing_method_(dijkstra()),
@@ -1247,6 +1274,7 @@ protected:
 	Path::Ptr BFSShortestPath(Location::PtrConst &startLoc, Location::PtrConst &endLoc);
 
 
+	Network *network_;
 	Segment::ExpediteSupport expedited_;
 	int mask_;
 	Location::PtrConst start_;
@@ -1263,12 +1291,6 @@ protected:
 };
 
 class Statistics; // Forward declaration
-
-class Network;
-static Network* networkInstance_;
-//Gets the singleton instance of Network
-Fwk::Ptr<Network> networkInstance();
-
 class Network : public Fwk::NamedInterface {
 public:
 	typedef Fwk::Ptr<Network> Ptr;
@@ -1328,12 +1350,8 @@ public:
 	static Network::Ptr NetworkNew(Fwk::String name) {
 		Ptr m = new Network(name);		
 		m->referencesDec(1);
-		//cout << "NETWORK CONSTRUCTOR IS " << m.ptr() << endl;
-		networkInstance_ = m.ptr();
-		//networkInstance();
 		return m;
 	}
-
 	
 	class NotifieeConst : public virtual Fwk::NamedInterface::NotifieeConst {
 	public:
@@ -1407,13 +1425,11 @@ public:
 	typedef NotifieeList::Iterator NotifieeIterator;
    	NotifieeIterator notifieeIter() { return notifiee_.iterator(); }
 	U32 notifiees() const { return notifiee_.members(); }
-	
+
 protected:
 	Network(Fwk::String name):
 		Fwk::NamedInterface(name)
-		{
-			networkInstance_ = this;
-		}
+		{}
 
 	void newNotifiee(Network::NotifieeConst *n) const {
 		Network* me = const_cast<Network*>(this);
@@ -1432,6 +1448,7 @@ protected:
 	}
 
 	void locationSegmentsDel(Location::Ptr m);
+
 
 	NotifieeList notifiee_;
 	map<Fwk::String, Location::Ptr> locations_;
@@ -1483,15 +1500,16 @@ public:
 	string simulationStatisticsOutput() const;
 	
 
-	static Statistics::Ptr StatisticsNew(Fwk::String name) {
-		Ptr m = new Statistics(name);
+	static Statistics::Ptr StatisticsNew(Fwk::String name, Network *network) {
+		Ptr m = new Statistics(name, network);
 		m->referencesDec(1);
 		return m;
 	}
 
 protected:
-	Statistics(Fwk::String name):
+	Statistics(Fwk::String name, Network *network):
 		Network::Notifiee(),
+		network_(network),
 		numCustomers_(0),
 		numPorts_(0),
 		numExpeditedSegments_(0)
@@ -1535,6 +1553,7 @@ protected:
 
 	map<string, ShippingRecord> shipmentRecords_;
 
+	Network *network_;
 	size_t numCustomers_;
 	size_t numPorts_;
 	size_t numTerminals_[3];

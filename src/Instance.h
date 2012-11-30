@@ -54,6 +54,9 @@ private:
 
 };
 
+namespace Shipping {
+class Network; // forward declared
+}
 ///
 /// Instance::Manager provides the interface to create and destroy
 /// instances.
@@ -77,6 +80,8 @@ public:
     /// Return the instance with the given name or null if there is none.
     ///
     virtual Ptr<Instance> instance(const string& name) = 0;
+
+    virtual Shipping::Network* network() = 0;
 
     ///
     /// Delete the instance with the given name, if there is one.

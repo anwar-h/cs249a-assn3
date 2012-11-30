@@ -2,11 +2,15 @@
 
 namespace Shipping {
 
-Segment::Segment(Fwk::String name, Mode mode):
+Segment::Segment(Fwk::String name, Mode mode, Network *network):
 	Fwk::NamedInterface(name),
+	network_(network),
 	mode_(mode),
 	exp_support_(Segment::expediteNotSupported())
-	{}
+	{
+		SegmentReactor::Ptr reactor = SegmentReactor::SegmentReactorNew(this, network_);
+		segmentReactorIs(reactor);
+	}
 
 string
 Segment::modeName(Mode m)
@@ -86,7 +90,7 @@ void
 Segment::arrivingShipmentIs(Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
-	PackageCount packagesPerVehicle = networkInstance()->fleet()->capacity(mode());
+	PackageCount packagesPerVehicle = network_->fleet()->capacity(mode());
 	VehicleCount numVehiclesOnSegment = numVehicles();
 
 	PackageCount totalPossiblePackages =
@@ -124,7 +128,7 @@ Segment::SegmentReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 	Activity::Ptr activity = activityManager_->activityNew("ForwardingActivity");
 	activity->lastNotifieeIs( new ForwardActivityReactor(activityManager_, activity.ptr(), notifier().ptr(), shipment.ptr()) );
 	Segment::Ptr seg = notifier();
-	Fleet::PtrConst fleet = networkInstance()->fleet();
+	Fleet::PtrConst fleet = network_->fleet();
 	Time timeToTraverse = Time(seg->length().value() / fleet->speed(seg->mode()).value());
 	shipment->latencyInc(Hours(seg->length().value() / fleet->speed(seg->mode()).value()));
 	activity->nextTimeIs(activityManager_->now().value() + timeToTraverse.value());
@@ -179,7 +183,7 @@ Location::LocationReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 	LocationType locationType = notifier()->locationType();
 	string destinationName = shipment->dest()->name();
 	string sourceName = shipment->source()->name();
-	Statistics::Ptr stats = const_cast<Statistics*>(networkInstance()->statistics().ptr());
+	Statistics::Ptr stats = const_cast<Statistics*>(network_->statistics().ptr());
 
 	if (locationType == Location::customer() && sourceName != notifier()->name()) {		
 		if (destinationName == notifier()->name()) {
@@ -214,7 +218,7 @@ Location::LocationReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 		} catch(...) {
 			// create retry activity
 			Activity::Ptr activity = activityManager_->activityNew("RetryActivity");
-			activity->lastNotifieeIs( new RetryActivityReactor(activityManager_, activity.ptr(), shipment.ptr(), segment.ptr()) );
+			activity->lastNotifieeIs( new RetryActivityReactor(activityManager_, activity.ptr(), shipment.ptr(), segment.ptr(), network_) );
 			double wait = dynamic_cast<RetryActivityReactor*>(activity->notifiee().ptr())->wait();
 			activity->nextTimeIs(activityManager_->now().value() + wait);
 			activity->statusIs(Activity::nextTimeScheduled);
@@ -248,7 +252,7 @@ void RetryActivityReactor::onStatus() {
 				}
 				else {
 					segment_->numShipmentsRefusedIs( ShipmentCount(segment_->numShipmentsRefused().value() + 1) );
-					Statistics::Ptr stats = const_cast<Statistics*>(networkInstance()->statistics().ptr());
+					Statistics::Ptr stats = const_cast<Statistics*>(network_->statistics().ptr());
 					stats->droppedShipmentIs(shipment_);
 				}
 			}
@@ -270,7 +274,7 @@ void InjectActivityReactor::onStatus() {
     switch (activity_->status()) {
 	    case Activity::executing:
 	    {
-	    	Shipment::Ptr shipment = networkInstance()->shipmentNew(customer_, customer_->destination(), customer_->shipmentSize());
+	    	Shipment::Ptr shipment = network_->shipmentNew(customer_, customer_->destination(), customer_->shipmentSize());
 			customer_->arrivingShipmentIs(shipment);
 			break;
 		}
@@ -295,6 +299,7 @@ void ForwardActivityReactor::onStatus() {
     switch (activity_->status()) {
 	    case Activity::executing:
 	    {
+	    	segment_->segmentLoadIs( PackageCount(segment_->segmentLoad().value() - shipment_->load().value()) );
 	    	Location::Ptr next = segment_->returnSegment()->source();
 	    	next->arrivingShipmentIs(shipment_);
 			break;
@@ -370,6 +375,7 @@ Customer::shipmentSizeIs(PackageCount pc){
 void
 Customer::destinationIs(Customer::Ptr c){
 	destination_ = c;
+
 	// tell all the notifiees
 	if(notifiees()) {
 		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
@@ -378,6 +384,10 @@ Customer::destinationIs(Customer::Ptr c){
 				cerr << "Customer::onDestination() notification was unsuccessful" << endl;
 			}
 		}
+	}
+	else {
+
+		cout << "NO CUSTOMER REACTOR! notifiees()=" << notifiees() << " reactor=" << endl; //customerReactor_ << endl;
 	}
 }
 
@@ -408,11 +418,14 @@ Customer::NotifieeConst::~NotifieeConst() {
 bool
 Customer::CustomerReactor::customerIsReady() const
 {
+//cout << __FILE__ << ":" << __LINE__ << " notifier=" << notifier().ptr() << " " << notifier()->name() <<endl;	
 	if (attributesSet_[transferRate_] && notifier()->transferRate().value() > 0 &&
 		attributesSet_[shipmentSize_] && notifier()->shipmentSize().value() > 0 &&
 		attributesSet_[dest_]) {
+//cout << __FILE__ << ":" << __LINE__ << " customerIsReady() returning true"<<endl;			
 		return true;
 	}
+//cout << __FILE__ << ":" << __LINE__ << " "<< notifier()->name() << " not ready " << endl;		
 	return false;
 }
 
@@ -420,7 +433,8 @@ void
 Customer::CustomerReactor::onTransferRate(ShipmentCount transferRate)
 {
 	//TODO
-	attributesSet_[transferRate_] = 1;
+	attributesSet_[transferRate_] = true;
+//cout << __FILE__ << ":" << __LINE__ << " transferRateSet"<<endl;
 	if (customerIsReady()) InjectActivityReactorNew();
 }
 
@@ -428,7 +442,8 @@ void
 Customer::CustomerReactor::onShipmentSize(PackageCount shipmentSize)
 {
 	//TODO
-	attributesSet_[shipmentSize_] = 1;
+	attributesSet_[shipmentSize_] = true;
+//cout << __FILE__ << ":" << __LINE__ << " shipmentSizeSet"<<endl;	
 	if (customerIsReady()) InjectActivityReactorNew();
 }
 
@@ -436,7 +451,8 @@ void
 Customer::CustomerReactor::onDestination(Customer::Ptr destination)
 {
 	//TODO
-	attributesSet_[dest_] = 1;
+	attributesSet_[dest_] = true;
+//cout << __FILE__ << ":" << __LINE__ << " destinationSet"<<endl;	
 	if (customerIsReady()) InjectActivityReactorNew();
 }
 
@@ -444,20 +460,16 @@ Customer::CustomerReactor::onDestination(Customer::Ptr destination)
 void
 Customer::CustomerReactor::InjectActivityReactorNew()
 {
-	//TODO
-	static bool beenHere = false;
-	if (!beenHere) {
-		beenHere = true;
-	}
-	else return;
-
+	if (createdInjectActivityReactor_) return;
+//cout << __FILE__ << ":" << __LINE__ << " "<< notifier()->name() << " making inject reactor" << endl;
 	Activity::Ptr activity = activityManager_->activityNew("InjectActivity");
 	activity->lastNotifieeIs(
 		new InjectActivityReactor(activityManager_, activity.ptr(),
-			notifier().ptr(), 24.0 / (double) notifier()->transferRate().value())
+			notifier().ptr(), 24.0 / (double) notifier()->transferRate().value(), network_)
 		);
 	activity->nextTimeIs(activityManager_->now().value());
 	activity->statusIs(Activity::nextTimeScheduled);
+	createdInjectActivityReactor_ = true;
 
 	//delete this; // we no longer have any use for this
 }
@@ -605,13 +617,14 @@ Path::stringValue() const
 	return output.str();
 }
 
-Shipment::Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p): 
+Shipment::Shipment(Customer::Ptr s, Customer::Ptr d, PackageCount p, Network *network): 
 	Fwk::NamedInterface(Shipment::shipmentName(s, d)),
+	network_(network),
 	src_(s),
 	dest_(d),
 	load_(p)
 	{
-		path_ = networkInstance()->connectivity()->shipmentPath(name());
+		path_ = network_->connectivity()->shipmentPath(name());
 		if (!path_) {
 			cerr <<__FILE__<<":"<<__LINE__<< ": ShipmentShipment() path not possible" << endl;
 			throw Fwk::EntityNotFoundException("shipment path does not exist");
@@ -922,7 +935,7 @@ Path::Ptr Connectivity::DijkstraShortestPath(Location::PtrConst &startLoc, Locat
 
 map<string, Path::Ptr> Connectivity::routes(RoutingMethod rm){
 	map<string, Path::Ptr> routeMap;
-	vector<Location::PtrConst> locs = networkInstance()->locations();
+	vector<Location::PtrConst> locs = network_->locations();
 
 	for(size_t i = 0; i < locs.size(); i++){
 		for(size_t j = 0; j < locs.size(); j++){
@@ -941,15 +954,6 @@ map<string, Path::Ptr> Connectivity::routes(RoutingMethod rm){
 	}
 	return routeMap;
 }
-
-Network::Ptr networkInstance() {
-	if (!networkInstance_) {
-		networkInstance_ = Network::NetworkNew("network").ptr();
-	}
-	cout << "NETWORK INSTANCE IS " << networkInstance_ << endl;
-	return networkInstance_;
-}
-
 
 Location::Ptr
 Network::location(const Fwk::String &name) {
@@ -992,7 +996,7 @@ Network::segmentNew(Fwk::String name, Segment::Mode mode)
 	}
 	// if not then create it and add to network
 	else {
-		seg = Segment::SegmentNew(name, mode);
+		seg = Segment::SegmentNew(name, mode, this);
 		segmentIs(name, seg);
 	}
 	// tell all the notifiees
@@ -1058,7 +1062,7 @@ Network::customerNew(Fwk::String name)
 	}
 	// if not then create it and add to network
 	else {
-		customer = Customer::CustomerNew(name);
+		customer = Customer::CustomerNew(name, this);
 		locationIs(name, customer);
 	}
 	// tell all the notifiees
@@ -1104,7 +1108,7 @@ Network::portNew(Fwk::String name)
 	}
 	// if not then create it and add to network
 	else {
-		port = Port::PortNew(name);
+		port = Port::PortNew(name, this);
 		locationIs(name, port);
 	}
 	// tell all the notifiees
@@ -1150,7 +1154,7 @@ Network::terminalNew(Fwk::String name, Segment::Mode vehicle_type)
 	}
 	// if not then create it and add to network
 	else {
-		terminal = Terminal::TerminalNew(name, vehicle_type);
+		terminal = Terminal::TerminalNew(name, vehicle_type, this);
 		locationIs(name, terminal);
 	}
 	// tell all the notifiees
@@ -1195,7 +1199,7 @@ Network::fleetNew(Fwk::String name)
 	}
 	// if not then create it and add to network
 	else {
-		fleet_ = Fleet::FleetNew(name);
+		fleet_ = Fleet::FleetNew(name, this);
 	}
 	return fleet_;
 }
@@ -1220,7 +1224,7 @@ Network::statisticsNew(Fwk::String name)
 	}
 	// if not then create it and add to network
 	else {
-		statistics_ = Statistics::StatisticsNew(name);
+		statistics_ = Statistics::StatisticsNew(name, this);
 	}
 	return statistics_;
 }
@@ -1245,10 +1249,10 @@ Network::connectivityNew(Fwk::String name)
 	}
 	// if not then create it and add to network
 	else {
-		connectivity_ = Connectivity::ConnectivityNew(name);;
+		connectivity_ = Connectivity::ConnectivityNew(name, this);
 	}
-	cout <<__FILE__<<":"<< __LINE__<< " network=" << this << endl;
-	cout <<__FILE__<<":"<< __LINE__<< " conn=" << connectivity_.ptr() << endl;
+	//cout <<__FILE__<<":"<< __LINE__<< " network=" << this << endl;
+	//cout <<__FILE__<<":"<< __LINE__<< " conn=" << connectivity_.ptr() << endl;
 	return connectivity_;
 }
 
@@ -1264,7 +1268,7 @@ Network::connectivityDel(Fwk::String name)
 Shipment::Ptr
 Network::shipmentNew(Customer::Ptr s, Customer::Ptr d, PackageCount p)
 {
-	Shipment::Ptr shipment = Shipment::ShipmentNew(s, d, p);
+	Shipment::Ptr shipment = Shipment::ShipmentNew(s, d, p, this);
 	// tell all the notifiees
 	if(notifiees()) {
 		for(NotifieeIterator n=notifieeIter(); n.ptr(); ++n) {
@@ -1302,6 +1306,7 @@ Network::NotifieeConst::~NotifieeConst() {
 string
 Statistics::simulationStatisticsOutput() const
 {
+cout << __FILE__ << ":" << __LINE__ << endl;
 	stringstream output;
 	output << "===== Stats attributes =====" << endl;
 	output << " --- Locations --- " << endl;
@@ -1325,7 +1330,7 @@ Statistics::simulationStatisticsOutput() const
     output << endl << endl;
 
     output << " --- Customers --- " << endl;
-    Network::Ptr network = networkInstance();
+    Network::Ptr network = network_;
     vector<Location::PtrConst> locations = network->locations();
     for (size_t i = 0; i < locations.size(); i++) {
     	if (locations[i]->locationType() != Location::customer()) {
@@ -1333,21 +1338,25 @@ Statistics::simulationStatisticsOutput() const
     	}
     	Customer::PtrConst customer = dynamic_cast<Customer const*>(locations[i].ptr());
     	//output << "# Shipments enroute   : " << numShipments(Statistics::enroute()) << endl;
-    	output << "Source:Dest=" << customer->name() << ":" << customer->destination()->name() << " : "
-    	<< "#Received=" << customer->shipmentsReceived().value() << " "
+    	output << "'" << customer->name() << "'->'";
+    	if (customer->destination()) output << customer->destination()->name() << "' : ";
+    	else output << "' : ";
+    	output << "Received=" << customer->shipmentsReceived().value() << " "
     	<< "avgLatency=" << customer->avgLatency().value() << " "
     	<< "totalCost=" << customer->totalCost().value() << " "
     	<< endl;
     }
     output << endl;
 
+    output << " --- Segments --- " << endl;
 	vector<Segment::PtrConst> segments = network->segments();
     for (size_t i = 0; i < segments.size(); i++) {
     	Segment::PtrConst segment = dynamic_cast<Segment const*>(segments[i].ptr());
+
     	output << segment->name() << " : "
-    	<< "#Received=" << segment->numShipmentsReceived().value() << " "
-    	<< "#ToldToWait=" << segment->numShipmentsToldToWait().value() << " "
-    	<< "#Refused=" << segment->numShipmentsRefused().value() << " "
+    	<< "Received=" << segment->numShipmentsReceived().value() << " "
+    	<< "ToldToWait=" << segment->numShipmentsToldToWait().value() << " "
+    	<< "Refused=" << segment->numShipmentsRefused().value() << " "
     	<< endl;
     }
 

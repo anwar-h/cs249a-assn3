@@ -7,8 +7,11 @@
 #include <queue>
 #include <vector>
 
-Fwk::Ptr<Activity::Manager> activityManagerInstance();
-Fwk::Ptr<Activity::Manager> realTimeManagerInstance();
+namespace Shipping {
+class Network; // forward declared
+}
+Fwk::Ptr<Activity::Manager> activityManagerInstance(Shipping::Network *network);
+Fwk::Ptr<Activity::Manager> realTimeManagerInstance(Shipping::Network *network);
 
 namespace ActivityImpl {
 
@@ -65,6 +68,7 @@ private:
 	Fwk::Ptr<class ManagerImpl> manager_;
 };
 
+
 class ManagerImpl : public Activity::Manager {
 public:
 	typedef Fwk::Ptr<ManagerImpl> Ptr;
@@ -87,17 +91,19 @@ public:
 	virtual Time now() const { return now_; }
 	virtual void nowIs(Time time);
 
-	static Fwk::Ptr<Activity::Manager> singletonActivityManagerInstance(ManagerType t);
+	static Fwk::Ptr<Activity::Manager> singletonActivityManagerInstance(ManagerType t, Shipping::Network *network);
 
 	virtual void lastActivityIs(Activity::Ptr activity);
 
 protected:
-    ManagerImpl(ManagerType t):
+    ManagerImpl(ManagerType t, Shipping::Network *network):
     	Manager(),
+    	network_(network),
     	managerType_(t),
     	now_(0)
     	{}
 
+    Shipping::Network *network_;
     ManagerType managerType_;
 	//Data members
 	std::priority_queue<Activity::Ptr, std::vector<Activity::Ptr>, ActivityComp> scheduledActivities_;

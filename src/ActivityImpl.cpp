@@ -6,14 +6,15 @@
 
 using namespace std;
 
-Fwk::Ptr<Activity::Manager> activityManagerInstance() {
+
+Fwk::Ptr<Activity::Manager> activityManagerInstance(Shipping::Network *network) {
 	ActivityImpl::ManagerImpl::ManagerType vt = ActivityImpl::ManagerImpl::virtualtime();
-    return ActivityImpl::ManagerImpl::singletonActivityManagerInstance(vt);
+    return ActivityImpl::ManagerImpl::singletonActivityManagerInstance(vt, network);
 }
 
-Fwk::Ptr<Activity::Manager> realTimeManagerInstance() {
+Fwk::Ptr<Activity::Manager> realTimeManagerInstance(Shipping::Network *network) {
 	ActivityImpl::ManagerImpl::ManagerType rt = ActivityImpl::ManagerImpl::realtime();
-    return ActivityImpl::ManagerImpl::singletonActivityManagerInstance(rt);
+    return ActivityImpl::ManagerImpl::singletonActivityManagerInstance(rt, network);
 }
 
 namespace ActivityImpl {
@@ -21,9 +22,9 @@ namespace ActivityImpl {
     Fwk::Ptr<Activity::Manager> ManagerImpl::activityInstance_ = Fwk::Ptr<Activity::Manager>();
     
     //Gets the singleton instance of ManagerImpl
-    Fwk::Ptr<Activity::Manager> ManagerImpl::singletonActivityManagerInstance(ManagerType t) {
+    Fwk::Ptr<Activity::Manager> ManagerImpl::singletonActivityManagerInstance(ManagerType t, Shipping::Network *network) {
 		if (!activityInstance_) {
-		    activityInstance_ = new ManagerImpl(t);
+		    activityInstance_ = new ManagerImpl(t, network);
 		}
 		if (t == ManagerImpl::realtime()) {
 			dynamic_cast<ManagerImpl*>(activityInstance_.ptr())->managerTypeIs(ManagerImpl::realtime());
@@ -70,12 +71,12 @@ namespace ActivityImpl {
 		if (!beenHere) {
 			beenHere = true;
 			cout <<__FILE__<<":"<< __LINE__<< " doing preprocess" << endl;
-			Shipping::Network::Ptr network = Shipping::networkInstance();
-			cout << "conn=" << network->connectivity().ptr() << endl;
-			Shipping::Connectivity::Ptr c = const_cast<Shipping::Connectivity*>(network->connectivity().ptr());
+			
+			//cout << "network=" << network.ptr() << endl;
+			//cout << "conn=" << network->connectivity().ptr() << endl;
+			Shipping::Connectivity::Ptr c = const_cast<Shipping::Connectivity*>(network_->connectivity().ptr());
 			c->simulationStatusIs(Shipping::Connectivity::running());
 			cout <<__FILE__<<":"<< __LINE__<< " end preprocess" << endl;
-			// preprocess code here
 		}
 
 		if (t < now_) return;

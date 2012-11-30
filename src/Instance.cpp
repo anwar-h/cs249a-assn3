@@ -29,6 +29,8 @@ public:
     // Manager method
     void instanceDel(const string& name);
 
+    Network* network() { return network_.ptr(); }
+
 private:
     Network::Ptr network_;
     Ptr<ConnRep> conn_;
@@ -121,11 +123,13 @@ public:
     void attributeIs(const string& name, const string& value){
         if (name == "Transfer Rate"){
             int val = atoi(value.c_str());
+            //cout << c_->name() << " transferRate=" << val << endl;
             ShipmentCount s = ShipmentCount(val);
             c_->transferRateIs(s);
         }
         else if (name == "Shipment Size"){
             int val = atoi(value.c_str());
+            //cout << c_->name() << " shipmentSize=" << val << endl;
             PackageCount s = PackageCount(val);
             c_->shipmentSizeIs(s);
         }
@@ -750,6 +754,7 @@ ManagerImpl::ManagerImpl() : network_(Network::NetworkNew("network"))
 
 Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {
     if (instance(name)) return NULL;
+
     if(!fleet_){
         Ptr<Fleet> fleet = network_->fleetNew("fleet");
         fleet_ = new FleetRep("fleet", this, fleet);
