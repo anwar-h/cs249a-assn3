@@ -18,9 +18,10 @@
 
 using namespace std;
 
-
-void SetUpNetwork(shippingInstanceManager<Ptr> &manager){
-
+int main(int argc, char *argv[]) {
+//  try
+//  {
+    Ptr<Instance::Manager> manager = shippingInstanceManager();
 
 	/* Set up the network */
 	vector< Ptr<Instance> > sources;
@@ -29,7 +30,7 @@ void SetUpNetwork(shippingInstanceManager<Ptr> &manager){
 	vector< Ptr<Instance> > segs10;
 	vector< Ptr<Instance> > segs100;
 
-	Ptr<Instance> fleet = manager->instanceNew("fleet", "fleet");
+	Ptr<Instance> fleet = manager->instanceNew("fleet");
 	fleet->attributeIs("truck speed", "20");
 
 
@@ -42,7 +43,6 @@ void SetUpNetwork(shippingInstanceManager<Ptr> &manager){
 	seg0->attributeIs("source", "destcustomer");
 	seg1->attributeIs("source", "termhub");
 	seg0->attributeIs("return segment", "seg1");
-
 
 
 	for(int i = 0; i < 10; i++){
@@ -61,15 +61,15 @@ void SetUpNetwork(shippingInstanceManager<Ptr> &manager){
 		segs10[i*2]->attributeIs("return segment", sname1.str());
 		
 
+
 		for (int j = 0; j < 10; j++){
 			stringstream cname;
 			cname << "scust"<< j + i * 20;
 			sources.push_back( manager->instanceNew(cname.str(), "Customer") );
-			
+
 			stringstream ssname0, ssname1;
 			ssname0 << "sg" << i * 20 + j * 2;
 			ssname1 << "sg" << i * 20 + j * 2 + 1;
-
 			segs100.push_back(manager->instanceNew(ssname0.str(), "Truck segment"));
 			segs100.push_back(manager->instanceNew(ssname1.str(), "Truck segment"));
 			segs100[i*20 + j*2]->attributeIs("source", tname.str());
@@ -83,6 +83,10 @@ void SetUpNetwork(shippingInstanceManager<Ptr> &manager){
 	seg1->attributeIs("Capacity", "30");
 
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> master
 	for(size_t i = 0; i < segs10.size(); i ++){
 		segs10[i]->attributeIs("length", "100");
 		segs10[i]->attributeIs("Capacity", "20");
@@ -96,27 +100,8 @@ void SetUpNetwork(shippingInstanceManager<Ptr> &manager){
 
 	//Set shipment stuff:
 	for(int i = 0; i < sources.size(); i ++){
-		sources[i]->attributeIs("Destination", "destcustomer");
-		sources[i]->attributeIs("Shipment Size", "100");
-		sources[i]->attributeIs("Transfer Rate", "10");
+		sources[i]->attribute("Destination")
 	}
-
-
-}
-
-
-int main(int argc, char *argv[]) {
-//  try
-//  {
-	Ptr<Instance::Manager> manager = shippingInstanceManager();
-
-	SetUpNetwork(manager);
-    
-
-	Activity::Manager::Ptr activityManager = activityManagerInstance();
-    activityManager->nowIs(72.0); //let 3 days pass and see what happens...
-    cout<<manager->instance("stats")->attribute("stats output");
-
 
 /*	cout << sources.size() << " sources" << endl;
 	cout << terminals.size() << " terminals" << endl;

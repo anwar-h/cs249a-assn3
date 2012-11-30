@@ -281,11 +281,11 @@ string SegmentRep::attribute(const string& name) {
         if (es == Segment::expediteNotSupported()) return "no";
     }
     else if (name == "Shipments Received"){
-        ShipmentCount s = segment_ -> shipmentsReceived();
+        ShipmentCount s = segment_ -> numShipmentsReceived();
         return s.stringValue();
     }
     else if (name == "Shipments Refused"){
-        ShipmentCount s = segment_ -> shipmentsRefused();
+        ShipmentCount s = segment_ -> numShipmentsRefused();
         return s.stringValue();
     }
     else if (name == "Capacity"){
@@ -406,6 +406,9 @@ string StatsRep::attribute(const string& name){
     else if (name == "expedite percentage"){
         float w = statistics_ -> percentExpeditedSegments();
         return NumberConverter<float>::toString(w);
+    }
+    else if (name == "stats output"){
+        return statistics_->simulationStatisticsOutput();
     }
     else {
         cerr<<"bad input"<<endl;
