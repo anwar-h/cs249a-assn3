@@ -1294,6 +1294,46 @@ Network::NotifieeConst::~NotifieeConst() {
    if(notifier_&&isNonReferencing()) notifier_->newRef();
 }
 
+string
+Statistics::simulationStatisticsOutput() const
+{
+	cout << "===== Stats attributes =====" << endl;
+	cout << " --- Locations --- " << endl;
+    cout << "# Customers.......: " << numCustomers() << endl;
+    cout << "# Ports...........: " << numPorts() << endl;
+    cout << "# Truck terminals.: " << numTerminals(Segment::truck()) << endl;
+    cout << "# Boat terminals..: " << numTerminals(Segment::boat()) << endl;
+    cout << "# Plane terminals.: " << numTerminals(Segment::plane()) << endl;
+    cout << endl;
+
+    cout << " --- Segments --- " << endl;
+    cout << "# Truck segments : " << numSegments(Segment::truck()) << endl;
+    cout << "# Boat segments  : " << numSegments(Segment::boat()) << endl;
+    cout << "# Plane segments : " << numSegments(Segment::plane()) << endl;
+    cout << endl;
+
+    cout << " --- Shipments --- " << endl;
+    cout << "# Shipments enroute   : " << numShipments(Statistics::enroute()) << endl;
+    cout << "# Shipments delivered : " << numShipments(Statistics::delivered()) << endl;
+    cout << "# Shipments dropped   : " << numShipments(Statistics::dropped()) << endl;
+    cout << endl;
+
+    cout << " --- Customers --- " << endl;
+    Network::Ptr network = networkInstance();
+    vector<Location::PtrConst> locations = network->locations();
+    for (size_t i = 0; i < locations.size(); i++) {
+    	if (locations[i]->locationType() != Location::customer()) {
+    		continue;
+    	}
+    	Customer::PtrConst customer = dynamic_cast<Customer const*>(locations[i].ptr());
+    	//cout << "# Shipments enroute   : " << numShipments(Statistics::enroute()) << endl;
+    	//cout << customer->name() << ":" << << " : " << customer->shiptmentsReceived().value() << endl;
+    }
+
+    return string();
+    //cout << "Expediting %     : " << stats->attribute("expedite percentage") << endl;
+}
+
 void
 Statistics::onSegmentNew(Segment::Ptr segment)
 {
@@ -1354,6 +1394,8 @@ Statistics::deliveredShipmentIs(Shipment::Ptr shipment)
 	map<string, ShippingRecord>::iterator found = shipmentRecords_.find(shipment->name());
 	found->second.numEnRouteInc(-1);
 	found->second.numDeliveredInc();
+	numShipmentsIs(Statistics::enroute(), numShipments(Statistics::enroute()) - 1);	
+	numShipmentsIs(Statistics::delivered(), numShipments(Statistics::delivered()) + 1);
 }
 
 void
@@ -1361,13 +1403,15 @@ Statistics::droppedShipmentIs(Shipment::Ptr shipment)
 {
 	map<string, ShippingRecord>::iterator found = shipmentRecords_.find(shipment->name());
 	found->second.numEnRouteInc(-1);
-	found->second.numDroppedInc();	
+	found->second.numDroppedInc();
+	numShipmentsIs(Statistics::enroute(), numShipments(Statistics::enroute()) - 1);	
+	numShipmentsIs(Statistics::dropped(), numShipments(Statistics::dropped()) + 1);
 }
 
 void
 Statistics::onShipmentNew(Shipment::Ptr shipment)
 {
-	numShipments_++;
+	numShipments_[Statistics::enroute()]++;
 	map<string, ShippingRecord>::iterator found = shipmentRecords_.find(shipment->name());
 	if (found == shipmentRecords_.end()) {
 		ShippingRecord record;

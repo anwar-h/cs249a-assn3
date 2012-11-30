@@ -1266,6 +1266,7 @@ public:
 	typedef Fwk::Ptr<Network> Ptr;
 	typedef Fwk::Ptr<Network const> PtrConst;
 
+
 	Location::Ptr location(const Fwk::String &name);
 	vector<Location::PtrConst> locations() const {
 		vector<Location::PtrConst> locs;
@@ -1435,6 +1436,10 @@ public:
 		dropped_
 	};
 
+	static inline ShipmentStatus enroute() { return enroute_; }
+	static inline ShipmentStatus delivered() { return delivered_; }
+	static inline ShipmentStatus dropped() { return dropped_;}
+
 	struct ShippingRecord {
 		int record[3];
 
@@ -1447,16 +1452,18 @@ public:
 		size_t numDropped() { return record[dropped_]; }
 	};
 
-	size_t numCustomers() { return numCustomers_; }
-	size_t numPorts() { return numPorts_; }
-	size_t numTerminals(Segment::Mode mode) { return numTerminals_[mode]; }
-	size_t numSegments(Segment::Mode mode) { return numSegments_[mode]; }
-	size_t numShipments() { return numShipments_; }
+	size_t numCustomers() const { return numCustomers_; }
+	size_t numPorts() const { return numPorts_; }
+	size_t numTerminals(Segment::Mode mode) const { return numTerminals_[mode]; }
+	size_t numSegments(Segment::Mode mode) const { return numSegments_[mode]; }
+	size_t numShipments(ShipmentStatus status) const { return numShipments_[status]; }
 
 	void deliveredShipmentIs(Shipment::Ptr shipment);
 	void droppedShipmentIs(Shipment::Ptr shipment);
 
 	float percentExpeditedSegments();
+
+	string simulationStatisticsOutput() const;
 	
 
 	static Statistics::Ptr StatisticsNew(Fwk::String name) {
@@ -1470,12 +1477,12 @@ protected:
 		Network::Notifiee(),
 		numCustomers_(0),
 		numPorts_(0),
-		numShipments_(0),
 		numExpeditedSegments_(0)
 		{
 			for(size_t i = 0; i < 3; i++) {
 				numTerminals_[i] = 0;
 				numSegments_[i] = 0;
+				numShipments_[i] = 0;
 			}
 		}
 
@@ -1490,6 +1497,9 @@ protected:
 	}
 	void numSegmentsIs(Segment::Mode mode, size_t n) {
 		numSegments_[mode] = n;
+	}
+	void numShipmentsIs(ShipmentStatus status, size_t n) {
+		numShipments_[status] = n;
 	}
 
 	void onSegmentNew(Segment::Ptr segment);
@@ -1512,7 +1522,7 @@ protected:
 	size_t numPorts_;
 	size_t numTerminals_[3];
 	size_t numSegments_[3];
-	size_t numShipments_;
+	size_t numShipments_[3];
 	size_t numExpeditedSegments_;
 };
 
