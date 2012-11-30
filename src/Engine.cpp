@@ -1247,6 +1247,8 @@ Network::connectivityNew(Fwk::String name)
 	else {
 		connectivity_ = Connectivity::ConnectivityNew(name);;
 	}
+	cout <<__FILE__<<":"<< __LINE__<< " network=" << this << endl;
+	cout <<__FILE__<<":"<< __LINE__<< " conn=" << connectivity_.ptr() << endl;
 	return connectivity_;
 }
 

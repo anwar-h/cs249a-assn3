@@ -1212,15 +1212,18 @@ public:
 	}
 
 	enum SimulationStatus {off_, running_};
-	static inline SimulationStatus off(){ return off_;}
-	static inline SimulationStatus running(){ return running_;}
+	static inline SimulationStatus off() { return off_; }
+	static inline SimulationStatus running() { return running_; }
 
 	SimulationStatus simulationStatus() const{
 		return simulation_status_;
 	}
-	void simulationStatusIs(SimulationStatus s){
-		if(simulation_status_ == off() && s == running()){ //simulation is starting
+	void simulationStatusIs(SimulationStatus s) {
+		cout <<__FILE__<<":"<< __LINE__<< " inside simulationStatusIs()" << endl;
+		if(simulationStatus() == off() && s == running()) { //simulation is starting
+			cout <<__FILE__<<":"<< __LINE__<< " doing dijkstra()" << endl;
 			routes_dijkstra_ = routes(dijkstra());
+			cout <<__FILE__<<":"<< __LINE__<< " doing bfs()" << endl;
 			routes_bfs_ = routes(bfs());
 		}
 		simulation_status_ = s;
@@ -1409,6 +1412,7 @@ protected:
 	Network(Fwk::String name):
 		Fwk::NamedInterface(name)
 		{
+			networkInstance_ = this;
 		}
 
 	void newNotifiee(Network::NotifieeConst *n) const {

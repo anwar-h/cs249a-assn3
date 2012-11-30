@@ -19,7 +19,7 @@
 using namespace std;
 
 
-void SetUpNetwork(shippingInstanceManager<Ptr> &manager){
+void SetUpNetwork(Ptr<Instance::Manager> &manager){
 
 
 	/* Set up the network */
@@ -29,12 +29,14 @@ void SetUpNetwork(shippingInstanceManager<Ptr> &manager){
 	vector< Ptr<Instance> > segs10;
 	vector< Ptr<Instance> > segs100;
 
-	Ptr<Instance> fleet = manager->instanceNew("fleet", "fleet");
-	fleet->attributeIs("truck speed", "20");
+	Ptr<Instance> fleet = manager->instanceNew("fleet", "Fleet");
+	fleet->attributeIs("Truck, speed", "20");
+cout<<__LINE__<<endl;
 
 
     Ptr<Instance> dest = manager->instanceNew("destcustomer", "Customer");
 	Ptr<Instance> hub = manager->instanceNew("termhub", "Truck terminal");
+cout<<__LINE__<<endl;
 
 
 	Ptr<Instance> seg0 = manager->instanceNew("seg0", "Truck segment");
@@ -43,7 +45,7 @@ void SetUpNetwork(shippingInstanceManager<Ptr> &manager){
 	seg1->attributeIs("source", "termhub");
 	seg0->attributeIs("return segment", "seg1");
 
-
+cout<<__LINE__<<endl;
 
 	for(int i = 0; i < 10; i++){
 		stringstream tname;
@@ -82,6 +84,7 @@ void SetUpNetwork(shippingInstanceManager<Ptr> &manager){
 	seg0->attributeIs("length", "50");
 	seg1->attributeIs("Capacity", "30");
 
+cout<<__LINE__<<endl;
 
 	for(size_t i = 0; i < segs10.size(); i ++){
 		segs10[i]->attributeIs("length", "100");
@@ -92,14 +95,17 @@ void SetUpNetwork(shippingInstanceManager<Ptr> &manager){
 		segs100[i]->attributeIs("Capacity", "20");
 	}
 
+cout<<__LINE__<<endl;
 
 
 	//Set shipment stuff:
-	for(int i = 0; i < sources.size(); i ++){
+	for(size_t i = 0; i < sources.size(); i ++){
 		sources[i]->attributeIs("Destination", "destcustomer");
 		sources[i]->attributeIs("Shipment Size", "100");
 		sources[i]->attributeIs("Transfer Rate", "10");
 	}
+
+cout<<__LINE__<<endl;
 
 
 }
@@ -109,12 +115,20 @@ int main(int argc, char *argv[]) {
 //  try
 //  {
 	Ptr<Instance::Manager> manager = shippingInstanceManager();
-
 	SetUpNetwork(manager);
-    
+cout<<__LINE__<<endl;
 
+	Ptr<Instance> stats = manager->instanceNew("stats", "Statistics");
+cout<<__LINE__<<endl;
+
+cout<<__LINE__<<endl;
+    
 	Activity::Manager::Ptr activityManager = activityManagerInstance();
+cout<<__LINE__<<endl;
+
     activityManager->nowIs(72.0); //let 3 days pass and see what happens...
+cout<<__LINE__<<endl;
+
     cout<<manager->instance("stats")->attribute("stats output");
 
 

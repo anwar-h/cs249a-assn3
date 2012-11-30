@@ -69,8 +69,12 @@ namespace ActivityImpl {
 
 		if (!beenHere) {
 			beenHere = true;
-			Shipping::Connectivity::Ptr c = const_cast<Shipping::Connectivity*>(Shipping::networkInstance()->connectivity().ptr());
+			cout <<__FILE__<<":"<< __LINE__<< " doing preprocess" << endl;
+			Shipping::Network::Ptr network = Shipping::networkInstance();
+			cout << "conn=" << network->connectivity().ptr() << endl;
+			Shipping::Connectivity::Ptr c = const_cast<Shipping::Connectivity*>(network->connectivity().ptr());
 			c->simulationStatusIs(Shipping::Connectivity::running());
+			cout <<__FILE__<<":"<< __LINE__<< " end preprocess" << endl;
 			// preprocess code here
 		}
 
