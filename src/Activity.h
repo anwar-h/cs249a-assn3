@@ -83,6 +83,9 @@ private:
 
 };
 
-extern Fwk::Ptr<Activity::Manager> activityManagerInstance();
+namespace Shipping {
+class Network; // forward declared
+}
+extern Fwk::Ptr<Activity::Manager> activityManagerInstance(Shipping::Network *network);
 
 #endif
