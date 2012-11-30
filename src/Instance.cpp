@@ -77,8 +77,9 @@ string LocationRep::attribute(const string& name) {
 
 
 void LocationRep::attributeIs(const string& name, const string& v) {
-    cerr <<"tried to set location attribute '" << name << "' to '" << v <<"'"<< endl;
-    throw Fwk::AttributeNotSupportedException(name);
+    stringstream s;
+    s <<"Attribute "<< name<<" not supported.";
+    throw Fwk::AttributeNotSupportedException(s.str());
 }
 
 static const string segmentStr = "segment";
@@ -138,8 +139,9 @@ public:
             c_->destinationIs(loc);
         }
         else {
-            cerr <<"tried to set customer attribute '" << name << "' to '" << value << "'"<< endl;
-            throw Fwk::AttributeNotSupportedException(name);
+            stringstream s;
+            s <<"Attribute "<< name<<" not supported.";
+            throw Fwk::AttributeNotSupportedException(s.str());
         }
     }
 
@@ -347,8 +349,9 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
         }    
     }
     else {
-        cerr <<"tried to set segment attribute '" << name << "' to '" << v << "'" << endl;
-        throw Fwk::AttributeNotSupportedException(name);
+        stringstream s;
+        s <<"Attribute "<< name<<" not supported.";
+        throw Fwk::AttributeNotSupportedException(s.str());
     }
 
 }
@@ -366,8 +369,6 @@ public:
     }
     string attribute(const string& name);
     void attributeIs(const string& name, const string& v) {
-        cerr <<"tried to set stats attributes."<< endl;
-//        throw Fwk::PermissionException(name);
     }
     ~StatsRep(){
         //do nothing
@@ -445,8 +446,9 @@ public:
             if (v == "BFS") connectivity_ -> routingMethodIs(Connectivity::bfs());
         }
         else{
-            cerr <<"tried to set conn attribute '" << name << "' to '" << v <<"'"<< endl;
-            throw Fwk::AttributeNotSupportedException(name);
+            stringstream s;
+            s <<"Attribute "<< name<<" not supported.";
+            throw Fwk::AttributeNotSupportedException(s.str());
         }
     }
 
@@ -681,8 +683,9 @@ cout<<"mode: " <<mode << " property: " << property<< endl;
     } else if (mode == "Plane"){
         m = Segment::plane();
     } else {
-        cerr <<"tried to set fleet attribute '" << mode << "' to '" << property << "'"<<endl;
-        throw Fwk::AttributeNotSupportedException(name);
+       stringstream s;
+        s <<"Attribute "<< name<<" not supported.";
+        throw Fwk::AttributeNotSupportedException(s.str());
     }
 
     if (property=="speed"){
@@ -741,8 +744,9 @@ cout<<"mode: " <<mode << " property: " << property<< endl;
 
 
     else{
-        cerr <<"tried to set fleet attribute '" << mode << "' to '" << property <<"'"<< endl;
-        throw Fwk::AttributeNotSupportedException(name);
+        stringstream s;
+        s <<"Attribute "<< name<<" not supported.";
+        throw Fwk::AttributeNotSupportedException(s.str());
     }
 }
 
@@ -845,8 +849,9 @@ Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {
         return fleet_;
     }
 
-    cerr <<"tried to create '" << type << "' instance"<< endl;
-    throw Fwk::AttributeNotSupportedException(name);
+    stringstream s;
+    s <<"Attribute "<< type<<" not supported.";
+    throw Fwk::AttributeNotSupportedException(s.str());
 }
 
 

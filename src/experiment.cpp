@@ -114,7 +114,6 @@ int main(int argc, char *argv[]) {
 
     cout<<manager->instance("stats")->attribute("stats output");
 
-
 /*	cout << sources.size() << " sources" << endl;
 	cout << terminals.size() << " terminals" << endl;
 	cout << segs10.size() << " segments in the row of 10" << endl;
