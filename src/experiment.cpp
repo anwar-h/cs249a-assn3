@@ -112,25 +112,28 @@ cout<<__LINE__<<endl;
 
 
 int main(int argc, char *argv[]) {
-//  try
-//  {
-	Ptr<Instance::Manager> manager = shippingInstanceManager();
-	SetUpNetwork(manager);
-cout<<__LINE__<<endl;
+	try{
+		Ptr<Instance::Manager> manager = shippingInstanceManager();
+		SetUpNetwork(manager);
+	cout<<__LINE__<<endl;
 
-	Ptr<Instance> stats = manager->instanceNew("stats", "Statistics");
-cout<<__LINE__<<endl;
+		Ptr<Instance> stats = manager->instanceNew("stats", "Statistics");
+	cout<<__LINE__<<endl;
 
-cout<<__LINE__<<endl;
-    
-	Activity::Manager::Ptr activityManager = activityManagerInstance();
-cout<<__LINE__<<endl;
+	cout<<__LINE__<<endl;
+	    
+		Activity::Manager::Ptr activityManager = activityManagerInstance();
+	cout<<__LINE__<<endl;
 
-    activityManager->nowIs(72.0); //let 3 days pass and see what happens...
-cout<<__LINE__<<endl;
+	    activityManager->nowIs(72.0); //let 3 days pass and see what happens...
+	cout<<__LINE__<<endl;
 
-    cout<<manager->instance("stats")->attribute("stats output");
-
+	    cout<<manager->instance("stats")->attribute("stats output");
+	}
+	catch(Fwk::Exception e)
+	{
+		cout << e.what() << endl;
+	}
 
 /*	cout << sources.size() << " sources" << endl;
 	cout << terminals.size() << " terminals" << endl;
