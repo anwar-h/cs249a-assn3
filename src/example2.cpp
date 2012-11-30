@@ -116,7 +116,7 @@ int main(int argc, char *argv[]) {
     cout << "# Ports          : " << stats->attribute("Port") << endl;
 
 
-    customer1->attributeIs("ShipmentSize", "2");
+    customer1->attributeIs("Shipment Size", "2");
 
     cerr << "Done!" << endl;
 

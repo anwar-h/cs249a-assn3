@@ -8,6 +8,7 @@
 #include <vector>
 
 Fwk::Ptr<Activity::Manager> activityManagerInstance();
+Fwk::Ptr<Activity::Manager> realTimeManagerInstance();
 
 namespace ActivityImpl {
 
@@ -68,6 +69,17 @@ class ManagerImpl : public Activity::Manager {
 public:
 	typedef Fwk::Ptr<ManagerImpl> Ptr;
 
+	enum ManagerType {
+		real_time_,
+		virtual_time_
+	};
+
+	static inline ManagerType realtime() { return real_time_; }
+	static inline ManagerType virtualtime() { return virtual_time_; }
+
+	void managerTypeIs(ManagerType m) { managerType_ = m; }
+	ManagerType managerType() const { return managerType_; }
+
 	virtual Activity::Ptr activityNew(const string& name);
 	virtual Activity::Ptr activity(const string& name) const;
 	virtual void activityDel(const string& name);
@@ -75,16 +87,18 @@ public:
 	virtual Time now() const { return now_; }
 	virtual void nowIs(Time time);
 
-	static Fwk::Ptr<Activity::Manager> activityManagerInstance();
+	static Fwk::Ptr<Activity::Manager> singletonActivityManagerInstance(ManagerType t);
 
 	virtual void lastActivityIs(Activity::Ptr activity);
 
 protected:
-    ManagerImpl():
+    ManagerImpl(ManagerType t):
     	Manager(),
+    	managerType_(t),
     	now_(0)
     	{}
 
+    ManagerType managerType_;
 	//Data members
 	std::priority_queue<Activity::Ptr, std::vector<Activity::Ptr>, ActivityComp> scheduledActivities_;
 	std::map<string, Activity::Ptr> activities_; //pool of all activities

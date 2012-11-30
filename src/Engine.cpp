@@ -4,7 +4,6 @@ namespace Shipping {
 
 Segment::Segment(Fwk::String name, Mode mode):
 	Fwk::NamedInterface(name),
-	segmentReactor_(SegmentReactor::SegmentReactorNew(this)),
 	mode_(mode),
 	exp_support_(Segment::expediteNotSupported())
 	{}
@@ -120,7 +119,7 @@ void
 Segment::SegmentReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 {
 	//TODO
-	Activity::Ptr activity = activityManager_->activityNew("Forwarding");
+	Activity::Ptr activity = activityManager_->activityNew("ForwardingActivity");
 	activity->lastNotifieeIs( new ForwardActivityReactor(activityManager_, activity.ptr(), notifier().ptr(), shipment.ptr()) );
 	Segment::Ptr seg = notifier();
 	Fleet::PtrConst fleet = networkInstance()->fleet();
@@ -183,9 +182,10 @@ Location::LocationReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 	if (locationType == Location::customer() && sourceName != notifier()->name()) {		
 		if (destinationName == notifier()->name()) {
 			//at destination
-			Customer *thisPtr = dynamic_cast<Customer*>(notifier().ptr());
-			thisPtr->shipmentsReceivedIs(ShipmentCount(thisPtr->shipmentsReceived().value() + 1));
-			thisPtr->totalLatencyInc(shipment->latency());
+			Customer *customer = dynamic_cast<Customer*>(notifier().ptr());
+			customer->shipmentsReceivedIs(ShipmentCount(customer->shipmentsReceived().value() + 1));
+			customer->totalLatencyInc(shipment->latency());
+			customer->totalCostInc(shipment->path()->cost());
 			stats->deliveredShipmentIs(shipment);
 		}
 		else {
@@ -211,7 +211,7 @@ Location::LocationReactor::onShipmentArrival(Fwk::Ptr<Shipment> &shipment)
 			}
 		} catch(...) {
 			// create retry activity
-			Activity::Ptr activity = activityManager_->activityNew("Retry");
+			Activity::Ptr activity = activityManager_->activityNew("RetryActivity");
 			activity->lastNotifieeIs( new RetryActivityReactor(activityManager_, activity.ptr(), shipment.ptr(), segment.ptr()) );
 			double wait = dynamic_cast<RetryActivityReactor*>(activity->notifiee().ptr())->wait();
 			activity->nextTimeIs(activityManager_->now().value() + wait);
@@ -308,6 +308,32 @@ void ForwardActivityReactor::onStatus() {
     }
 }
 
+void FleetActivityReactor::onStatus() {
+    switch (activity_->status()) {
+	    case Activity::executing:
+	    {
+	    	// switch fleet attributes
+	    	if (fleet_->timeOfDay() == Fleet::night())
+	    		fleet_->timeOfDayIs(Fleet::day());
+	    	else fleet_->timeOfDayIs(Fleet::night());
+			break;
+		}
+	    case Activity::free:
+	    {
+			//when done, automatically enqueue myself for next execution
+			activity_->nextTimeIs(Time(activity_->nextTime().value() + HALF_DAY));
+			activity_->statusIs(Activity::nextTimeScheduled);
+			break;
+		}
+	    case Activity::nextTimeScheduled:
+	    {
+			//add myself to be scheduled
+			manager_->lastActivityIs(activity_);
+			break;
+		}
+	    default: break;
+    }
+}
 
 
 void
@@ -422,13 +448,15 @@ Customer::CustomerReactor::InjectActivityReactorNew()
 	}
 	else return;
 
-	Activity::Ptr activity = activityManager_->activityNew("Inject");
+	Activity::Ptr activity = activityManager_->activityNew("InjectActivity");
 	activity->lastNotifieeIs(
 		new InjectActivityReactor(activityManager_, activity.ptr(),
 			notifier().ptr(), 24.0 / (double) notifier()->transferRate().value())
 		);
 	activity->nextTimeIs(activityManager_->now().value());
 	activity->statusIs(Activity::nextTimeScheduled);
+
+	//delete this; // we no longer have any use for this
 }
 
 
@@ -1266,6 +1294,46 @@ Network::NotifieeConst::~NotifieeConst() {
    if(notifier_&&isNonReferencing()) notifier_->newRef();
 }
 
+string
+Statistics::simulationStatisticsOutput() const
+{
+	cout << "===== Stats attributes =====" << endl;
+	cout << " --- Locations --- " << endl;
+    cout << "# Customers.......: " << numCustomers() << endl;
+    cout << "# Ports...........: " << numPorts() << endl;
+    cout << "# Truck terminals.: " << numTerminals(Segment::truck()) << endl;
+    cout << "# Boat terminals..: " << numTerminals(Segment::boat()) << endl;
+    cout << "# Plane terminals.: " << numTerminals(Segment::plane()) << endl;
+    cout << endl;
+
+    cout << " --- Segments --- " << endl;
+    cout << "# Truck segments : " << numSegments(Segment::truck()) << endl;
+    cout << "# Boat segments  : " << numSegments(Segment::boat()) << endl;
+    cout << "# Plane segments : " << numSegments(Segment::plane()) << endl;
+    cout << endl;
+
+    cout << " --- Shipments --- " << endl;
+    cout << "# Shipments enroute   : " << numShipments(Statistics::enroute()) << endl;
+    cout << "# Shipments delivered : " << numShipments(Statistics::delivered()) << endl;
+    cout << "# Shipments dropped   : " << numShipments(Statistics::dropped()) << endl;
+    cout << endl;
+
+    cout << " --- Customers --- " << endl;
+    Network::Ptr network = networkInstance();
+    vector<Location::PtrConst> locations = network->locations();
+    for (size_t i = 0; i < locations.size(); i++) {
+    	if (locations[i]->locationType() != Location::customer()) {
+    		continue;
+    	}
+    	Customer::PtrConst customer = dynamic_cast<Customer const*>(locations[i].ptr());
+    	//cout << "# Shipments enroute   : " << numShipments(Statistics::enroute()) << endl;
+    	//cout << customer->name() << ":" << << " : " << customer->shiptmentsReceived().value() << endl;
+    }
+
+    return string();
+    //cout << "Expediting %     : " << stats->attribute("expedite percentage") << endl;
+}
+
 void
 Statistics::onSegmentNew(Segment::Ptr segment)
 {
@@ -1326,6 +1394,8 @@ Statistics::deliveredShipmentIs(Shipment::Ptr shipment)
 	map<string, ShippingRecord>::iterator found = shipmentRecords_.find(shipment->name());
 	found->second.numEnRouteInc(-1);
 	found->second.numDeliveredInc();
+	numShipmentsIs(Statistics::enroute(), numShipments(Statistics::enroute()) - 1);	
+	numShipmentsIs(Statistics::delivered(), numShipments(Statistics::delivered()) + 1);
 }
 
 void
@@ -1333,13 +1403,15 @@ Statistics::droppedShipmentIs(Shipment::Ptr shipment)
 {
 	map<string, ShippingRecord>::iterator found = shipmentRecords_.find(shipment->name());
 	found->second.numEnRouteInc(-1);
-	found->second.numDroppedInc();	
+	found->second.numDroppedInc();
+	numShipmentsIs(Statistics::enroute(), numShipments(Statistics::enroute()) - 1);	
+	numShipmentsIs(Statistics::dropped(), numShipments(Statistics::dropped()) + 1);
 }
 
 void
 Statistics::onShipmentNew(Shipment::Ptr shipment)
 {
-	numShipments_++;
+	numShipments_[Statistics::enroute()]++;
 	map<string, ShippingRecord>::iterator found = shipmentRecords_.find(shipment->name());
 	if (found == shipmentRecords_.end()) {
 		ShippingRecord record;

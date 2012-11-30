@@ -76,12 +76,12 @@ int main(int argc, char *argv[]) {
 			segs100[i*20 + j*2]->attributeIs("source", tname.str());
 			segs100[i*20 + j*2 + 1]->attributeIs("source", cname.str());
 			segs100[i*20 + j*2]->attributeIs("return segment", ssname1.str());		
+
 		}
 	}
 
 	seg0->attributeIs("length", "50");
 	seg1->attributeIs("Capacity", "30");
-
 
 
 	for(size_t i = 0; i < segs10.size(); i ++){

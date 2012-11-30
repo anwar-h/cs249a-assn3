@@ -233,12 +233,6 @@ public:
 	void shipmentsReceivedIs(ShipmentCount c) { shipments_received_ = c; }
 	ShipmentCount shipmentsRefused() const { return shipments_refused_; }
 
-	static Segment::Ptr SegmentNew(Fwk::String name, Mode mode) {
-		Ptr m = new Segment(name, mode);
-		m->referencesDec(1);
-		// decr. refer count to compensate for initial val of 1
-		return m;
-	}
 
 	class NotifieeConst : public virtual Fwk::NamedInterface::NotifieeConst {
 	public:
@@ -318,6 +312,15 @@ public:
 		Activity::Manager::Ptr activityManager_;
 	};
 
+	void segmentReactorIs(SegmentReactor::Ptr reactor) { segmentReactor_ = reactor.ptr(); }
+	static Segment::Ptr SegmentNew(Fwk::String name, Mode mode) {
+		Ptr m = new Segment(name, mode);
+		m->segmentReactorIs( SegmentReactor::SegmentReactorNew(m.ptr()) );
+		m->referencesDec(1);
+		// decr. refer count to compensate for initial val of 1
+		return m;
+	}
+
 	typedef Fwk::ListRaw<NotifieeConst> NotifieeList;
 	typedef NotifieeList::Iterator NotifieeIterator;
    	NotifieeIterator notifieeIter() { return notifiee_.iterator(); }
@@ -336,7 +339,7 @@ protected:
 	}
 	
 	NotifieeList notifiee_;
-	SegmentReactor::Ptr segmentReactor_;
+	SegmentReactor* segmentReactor_;
 	Mode mode_;
 	Fwk::Ptr<Location> source_;
 	Mile length_;
@@ -398,12 +401,6 @@ public:
 		return segments_.end();
 	}
 
-	static Location::Ptr LocationNew(Fwk::String name, LocationType location_type) {
-		Ptr m = new Location(name, location_type);
-		m->referencesDec(1);
-		// decr. refer count to compensate for initial val of 1
-		return m;
-	}
 
 	class NotifieeConst : public virtual Fwk::NamedInterface::NotifieeConst {
 	public:
@@ -478,10 +475,21 @@ public:
 			activityManager_(activityManagerInstance())
 			{
 				notifierIs(notifier);
+				//cout << "notifier=" << notifier.ptr() << endl;
+				//cout << __FILE__ << ":" << __LINE__ << " LocationReactor()" << endl;
 			}
 
 		Activity::Manager::Ptr activityManager_;
 	};
+
+	void locationReactorIs(LocationReactor::Ptr reactor) { locationReactor_ = reactor.ptr(); }
+	static Location::Ptr LocationNew(Fwk::String name, LocationType location_type) {
+		Ptr m = new Location(name, location_type);
+		m->locationReactorIs( LocationReactor::LocationReactorNew(m.ptr()) );
+		m->referencesDec(1);
+		// decr. refer count to compensate for initial val of 1
+		return m;
+	}
 
 
 	typedef Fwk::ListRaw<NotifieeConst> NotifieeList;
@@ -492,9 +500,11 @@ public:
 protected:
 	Location(Fwk::String name, LocationType location_type):
 		Fwk::NamedInterface(name),
-		location_type_(location_type),
-		locationReactor_(LocationReactor::LocationReactorNew(this))
-		{}
+		location_type_(location_type)
+		{
+			//cout << "location(aka notifier)=" << this << endl;
+			//cout << __FILE__ << ":" << __LINE__ << " Location()" << endl;
+		}
 
 	void newNotifiee(Location::NotifieeConst *n) const {
 		Location* me = const_cast<Location*>(this);
@@ -519,7 +529,7 @@ protected:
 	NotifieeList notifiee_;
 	vector<Segment::PtrConst> segments_;
 	LocationType location_type_;
-	LocationReactor::Ptr locationReactor_;
+	LocationReactor* locationReactor_;
 };
 
 class Customer : public Location {
@@ -554,15 +564,10 @@ public:
 	Hours avgLatency() const{
 		return Hours(total_latency_.value() / shipments_received_.value());
 	}
+
+	void totalCostInc(Dollars d) { total_cost_ = Dollars(total_cost_.value() + d.value()); }
 	Dollars totalCost() const {
 		return total_cost_;
-	}
-
-	static Customer::Ptr CustomerNew(Fwk::String name) {
-		Ptr m = new Customer(name);
-		m->referencesDec(1);
-		// decr. refer count to compensate for initial val of 1
-		return m;
 	}
 
 	class NotifieeConst : public virtual Fwk::NamedInterface::NotifieeConst {
@@ -643,6 +648,7 @@ public:
 			{
 				notifierIs(notifier);
 				attributesSet_[0] = attributesSet_[1] = attributesSet_[2] = 0;
+				//cout << __FILE__ << ":" << __LINE__ << " CustomerReactor()" << endl;
 			}
 
 		enum Attributes {transferRate_ = 0, shipmentSize_, dest_};
@@ -656,6 +662,15 @@ public:
 		Customer::Ptr destination_;
 	};
 
+	void customerReactorIs(CustomerReactor::Ptr reactor) { customerReactor_ = reactor.ptr(); }
+
+	static Customer::Ptr CustomerNew(Fwk::String name) {
+		Ptr m = new Customer(name);
+		m->customerReactorIs( CustomerReactor::CustomerReactorNew(m.ptr()) );
+		m->referencesDec(1);
+		// decr. refer count to compensate for initial val of 1
+		return m;
+	}
 
 	typedef Fwk::ListRaw<NotifieeConst> NotifieeList;
 	typedef NotifieeList::Iterator NotifieeIterator;
@@ -664,9 +679,10 @@ public:
 	
 protected:
 	Customer(Fwk::String name):
-		Location(name, Location::customer()),
-		customerReactor_(CustomerReactor::CustomerReactorNew(this))
-		{}
+		Location(name, Location::customer())
+		{
+			//cout << __FILE__ << ":" << __LINE__ << " Customer()" << endl;
+		}
 
 	void newNotifiee(Customer::NotifieeConst *n) const {
 		Customer* me = const_cast<Customer*>(this);
@@ -677,7 +693,7 @@ protected:
 		me->notifiee_.deleteMember(n);
 	}
 	
-	CustomerReactor::Ptr customerReactor_;
+	CustomerReactor* customerReactor_;
 	NotifieeList notifiee_;
 	ShipmentCount transfer_rate_;
 	PackageCount shipment_size_;
@@ -730,24 +746,83 @@ protected:
 	Segment::Mode vehicle_type_;
 };
 
+class Fleet;
+class FleetActivityReactor : public Activity::Notifiee {
+public:
+
+	static const double HALF_DAY = 12.0;
+
+	void onStatus();
+
+	FleetActivityReactor(Fwk::Ptr<Activity::Manager> manager, Activity *activity, Fleet *fleet):
+		Notifiee(activity),
+		fleet_(fleet),
+		activity_(activity),
+		manager_(manager)
+		{}
+
+protected:
+	Fwk::Ptr<Fleet> fleet_;
+	Activity::Ptr activity_;
+	Fwk::Ptr<Activity::Manager> manager_;
+};
+
+
 class Fleet : public Fwk::NamedInterface {
 public:
 	typedef Fwk::Ptr<Fleet> Ptr;
 	typedef Fwk::Ptr<Fleet const> PtrConst;
 
-	MilesPerHour speed(Segment::Mode m) const { return speed_[m]; }
-	void speedIs(Segment::Mode m, MilesPerHour s){
-		speed_[m] = s;
+	enum TimeOfDay {
+		day_,
+		night_,
+	};
+
+	static inline TimeOfDay day() { return day_; }
+	static inline TimeOfDay night() { return night_; }
+	static string timeOfDayString(TimeOfDay t) {
+		switch(t) {
+			case day_: return "day";
+			case night_: return "night";
+			default: return "";
+		}
 	}
 
-	PackageCount capacity(Segment::Mode m) const { return capacity_[m]; }
-	void capacityIs(Segment::Mode m, PackageCount c){
-		capacity_[m] = c;
+	TimeOfDay timeOfDay() const { return time_of_day_; }
+	void timeOfDayIs(TimeOfDay t) { time_of_day_ = t; }
+
+
+	MilesPerHour speed(Segment::Mode m) const { return speed(m, timeOfDay()); }
+	MilesPerHour speed(Segment::Mode m, TimeOfDay tod) const
+	{
+		map<string, MilesPerHour>::const_iterator found = speeds_.find(key(m, tod));
+		if (found != speeds_.end()) return found->second;
+		return MilesPerHour();
+	}
+	void speedIs(Segment::Mode m, MilesPerHour s, TimeOfDay tod) {
+		speeds_[key(m, tod)] = s;
 	}
 
-	Dollars costPerMile(Segment::Mode m) const { return cost_per_mile_[m]; }
-	void costPerMileIs(Segment::Mode m, Dollars cpm){
-		cost_per_mile_[m] = cpm;
+	PackageCount capacity(Segment::Mode m) const { return capacity(m, timeOfDay()); }
+	PackageCount capacity(Segment::Mode m, TimeOfDay tod) const
+	{
+		map<string, PackageCount>::const_iterator found = capacities_.find(key(m, tod));
+		if (found != capacities_.end()) return found->second;
+		return PackageCount();
+	}
+	void capacityIs(Segment::Mode m, PackageCount c, TimeOfDay tod) {
+		capacities_[key(m, tod)] = c;
+	}
+
+	Dollars costPerMile(Segment::Mode m) const { return costPerMile(m, timeOfDay()); }
+	Dollars costPerMile(Segment::Mode m, TimeOfDay tod) const
+	{
+		map<string, Dollars>::const_iterator found = costs_per_mile_.find(key(m, tod));
+		if (found != costs_per_mile_.end()) return found->second;
+		return Dollars();
+	}
+	void costPerMileIs(Segment::Mode m, Dollars cpm, TimeOfDay tod) {
+		costs_per_mile_[key(m, tod)] = cpm;
 	}
 
 	static Fleet::Ptr FleetNew(Fwk::String name) {
@@ -759,15 +834,42 @@ public:
 
 protected:	
 	Fleet(Fwk::String name):
-		Fwk::NamedInterface(name)
+		Fwk::NamedInterface(name),
+		time_of_day_(Fleet::night()),
+		activityManager_(activityManagerInstance())
 		{
-			cost_per_mile_[0] = cost_per_mile_[1] = cost_per_mile_[2] = Dollars(1.f);
-			speed_[0] = speed_[1] = speed_[2] = MilesPerHour(1.f);
+			vector<string> keys;
+			keys.push_back(key(Segment::truck(), Fleet::day()));
+			keys.push_back(key(Segment::boat(), Fleet::day()));
+			keys.push_back(key(Segment::plane(), Fleet::day()));
+			keys.push_back(key(Segment::truck(), Fleet::night()));
+			keys.push_back(key(Segment::boat(), Fleet::night()));
+			keys.push_back(key(Segment::plane(), Fleet::night()));
+
+			for (size_t i = 0; i < keys.size(); i++) {
+				costs_per_mile_[keys[i]] = Dollars(1.f);
+				speeds_[keys[i]] = MilesPerHour(1.f);
+				capacities_[keys[i]] = PackageCount(100);
+			}
+
+			Activity::Ptr activity = activityManager_->activityNew("FleetActivity");
+			activity->lastNotifieeIs( new FleetActivityReactor(activityManager_, activity.ptr(), this) );
+			activity->nextTimeIs(8.0);
+			activity->statusIs(Activity::nextTimeScheduled);
 		}
 
-	MilesPerHour speed_[3];
-	PackageCount capacity_[3];
-	Dollars cost_per_mile_[3];
+	string key(Segment::Mode m, TimeOfDay t) const {
+		stringstream stream;
+		stream << Segment::modeName(m) << "_" << Fleet::timeOfDayString(t);
+		return stream.str();
+	}
+
+	map<string, MilesPerHour> speeds_;
+	map<string, PackageCount> capacities_;
+	map<string, Dollars> costs_per_mile_;
+
+	TimeOfDay time_of_day_;
+	Activity::Manager::Ptr activityManager_;
 };
 
 class Path : public Fwk::NamedInterface {
@@ -969,8 +1071,8 @@ protected:
 	double rate_;
 	Activity::Ptr activity_;
 	Fwk::Ptr<Activity::Manager> manager_;
-	
 };
+
 class ForwardActivityReactor : public Activity::Notifiee {
 public:
 	void onStatus();
@@ -990,6 +1092,7 @@ protected:
 	Activity::Ptr activity_;
 	Fwk::Ptr<Activity::Manager> manager_;
 };
+
 
 
 class Connectivity : public Fwk::NamedInterface {
@@ -1163,6 +1266,7 @@ public:
 	typedef Fwk::Ptr<Network> Ptr;
 	typedef Fwk::Ptr<Network const> PtrConst;
 
+
 	Location::Ptr location(const Fwk::String &name);
 	vector<Location::PtrConst> locations() const {
 		vector<Location::PtrConst> locs;
@@ -1332,6 +1436,10 @@ public:
 		dropped_
 	};
 
+	static inline ShipmentStatus enroute() { return enroute_; }
+	static inline ShipmentStatus delivered() { return delivered_; }
+	static inline ShipmentStatus dropped() { return dropped_;}
+
 	struct ShippingRecord {
 		int record[3];
 
@@ -1344,16 +1452,18 @@ public:
 		size_t numDropped() { return record[dropped_]; }
 	};
 
-	size_t numCustomers() { return numCustomers_; }
-	size_t numPorts() { return numPorts_; }
-	size_t numTerminals(Segment::Mode mode) { return numTerminals_[mode]; }
-	size_t numSegments(Segment::Mode mode) { return numSegments_[mode]; }
-	size_t numShipments() { return numShipments_; }
+	size_t numCustomers() const { return numCustomers_; }
+	size_t numPorts() const { return numPorts_; }
+	size_t numTerminals(Segment::Mode mode) const { return numTerminals_[mode]; }
+	size_t numSegments(Segment::Mode mode) const { return numSegments_[mode]; }
+	size_t numShipments(ShipmentStatus status) const { return numShipments_[status]; }
 
 	void deliveredShipmentIs(Shipment::Ptr shipment);
 	void droppedShipmentIs(Shipment::Ptr shipment);
 
 	float percentExpeditedSegments();
+
+	string simulationStatisticsOutput() const;
 	
 
 	static Statistics::Ptr StatisticsNew(Fwk::String name) {
@@ -1367,12 +1477,12 @@ protected:
 		Network::Notifiee(),
 		numCustomers_(0),
 		numPorts_(0),
-		numShipments_(0),
 		numExpeditedSegments_(0)
 		{
 			for(size_t i = 0; i < 3; i++) {
 				numTerminals_[i] = 0;
 				numSegments_[i] = 0;
+				numShipments_[i] = 0;
 			}
 		}
 
@@ -1387,6 +1497,9 @@ protected:
 	}
 	void numSegmentsIs(Segment::Mode mode, size_t n) {
 		numSegments_[mode] = n;
+	}
+	void numShipmentsIs(ShipmentStatus status, size_t n) {
+		numShipments_[status] = n;
 	}
 
 	void onSegmentNew(Segment::Ptr segment);
@@ -1409,7 +1522,7 @@ protected:
 	size_t numPorts_;
 	size_t numTerminals_[3];
 	size_t numSegments_[3];
-	size_t numShipments_;
+	size_t numShipments_[3];
 	size_t numExpeditedSegments_;
 };
 

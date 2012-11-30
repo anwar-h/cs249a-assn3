@@ -7,7 +7,13 @@
 using namespace std;
 
 Fwk::Ptr<Activity::Manager> activityManagerInstance() {
-    return ActivityImpl::ManagerImpl::activityManagerInstance();
+	ActivityImpl::ManagerImpl::ManagerType vt = ActivityImpl::ManagerImpl::virtualtime();
+    return ActivityImpl::ManagerImpl::singletonActivityManagerInstance(vt);
+}
+
+Fwk::Ptr<Activity::Manager> realTimeManagerInstance() {
+	ActivityImpl::ManagerImpl::ManagerType rt = ActivityImpl::ManagerImpl::realtime();
+    return ActivityImpl::ManagerImpl::singletonActivityManagerInstance(rt);
 }
 
 namespace ActivityImpl {
@@ -15,23 +21,26 @@ namespace ActivityImpl {
     Fwk::Ptr<Activity::Manager> ManagerImpl::activityInstance_ = Fwk::Ptr<Activity::Manager>();
     
     //Gets the singleton instance of ManagerImpl
-    Fwk::Ptr<Activity::Manager> ManagerImpl::activityManagerInstance() {
+    Fwk::Ptr<Activity::Manager> ManagerImpl::singletonActivityManagerInstance(ManagerType t) {
 		if (!activityInstance_) {
-		    activityInstance_ = new ManagerImpl();
+		    activityInstance_ = new ManagerImpl(t);
+		}
+		if (t == ManagerImpl::realtime()) {
+			dynamic_cast<ManagerImpl*>(activityInstance_.ptr())->managerTypeIs(ManagerImpl::realtime());
 		}
 		return activityInstance_;
     }
     
     Activity::Ptr ManagerImpl::activityNew(const string& name) {
-		Activity::Ptr activity = activities_[name];
+		Activity::Ptr activity;
+	//	activity = activities_[name];
 
-		if (activity) {
-		    cerr << "Activity already exists!" << endl;
-		    return Activity::Ptr();
-		}
-		
+	//	if (activity) {
+	//	    cerr << "Activity already exists!" << endl;
+	//	    return Activity::Ptr();
+	//	}
 		activity = new ActivityImpl(name, this);
-		activities_[name] = activity;
+	//	activities_[name] = activity;
 
 		return activity;
     }
@@ -79,8 +88,10 @@ namespace ActivityImpl {
 			//calculate amount of time to sleep
 			Time diff = Time(nextToRun->nextTime().value() - now_.value());
 			
-			//sleep 100ms (100,000 microseconds) for every unit of time
-			usleep(( ((int)diff.value()) * 100000));
+			if (managerType() == ManagerImpl::realtime()) {
+				//sleep 1s (1,000,000 microseconds) for every unit of time
+				usleep(( ((int)diff.value()) * 1000000 ));
+			}
 			
 			now_ = nextToRun->nextTime();
 
@@ -95,6 +106,5 @@ namespace ActivityImpl {
 		//syncrhonize the time
 		now_ = t;
 	}
-
 
 } //end namespace ActivityImpl
