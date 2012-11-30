@@ -73,6 +73,9 @@ namespace ActivityImpl {
 			c->simulationStatusIs(Shipping::Connectivity::running());
 			// preprocess code here
 		}
+
+		if (t < now_) return;
+		
 		//find the most recent activites to run and run them in order
 		while (!scheduledActivities_.empty()) {
 			

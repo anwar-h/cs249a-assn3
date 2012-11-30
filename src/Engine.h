@@ -229,10 +229,14 @@ public:
 		segmentLoad_ = pc;
 	}
 
-	ShipmentCount shipmentsReceived() const { return shipments_received_; }
-	void shipmentsReceivedIs(ShipmentCount c) { shipments_received_ = c; }
-	ShipmentCount shipmentsRefused() const { return shipments_refused_; }
+	ShipmentCount numShipmentsToldToWait() const { return shipments_told_to_wait_; }
+	void numShipmentsToldToWaitIs(ShipmentCount c) { shipments_told_to_wait_ = c; }	
 
+	ShipmentCount numShipmentsReceived() const { return shipments_received_; }
+	void numShipmentsReceivedIs(ShipmentCount c) { shipments_received_ = c; }
+
+	ShipmentCount numShipmentsRefused() const { return shipments_refused_; }
+	void numShipmentsRefusedIs(ShipmentCount c) { shipments_refused_ = c; }
 
 	class NotifieeConst : public virtual Fwk::NamedInterface::NotifieeConst {
 	public:
@@ -350,6 +354,7 @@ protected:
 	PackageCount segmentLoad_;
 	ShipmentCount shipments_received_;
 	ShipmentCount shipments_refused_;
+	ShipmentCount shipments_told_to_wait_;
 };
 
 class Location : public Fwk::NamedInterface {
@@ -1274,6 +1279,14 @@ public:
 			locs.push_back(itr->second.ptr());
 		}
 		return locs;
+	}
+
+	vector<Segment::PtrConst> segments() const {
+		vector<Segment::PtrConst> segs;
+		for (map<string, Segment::Ptr>::const_iterator itr = segments_.begin(); itr != segments_.end(); ++itr) {
+			segs.push_back(itr->second.ptr());
+		}
+		return segs;
 	}
 	Segment::Ptr segment(const Fwk::String &name) {
 		map<Fwk::String, Segment::Ptr>::iterator found = segments_.find(name);

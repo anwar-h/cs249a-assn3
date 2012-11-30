@@ -96,6 +96,7 @@ Segment::arrivingShipmentIs(Fwk::Ptr<Shipment> &shipment)
 
 	if (shipment->load() <= spaceAvailable) {
 		segmentLoadIs( PackageCount(segmentLoad().value() + shipment->load().value()) );
+		numShipmentsReceivedIs( ShipmentCount(numShipmentsReceived().value() + 1) );
 
 		// tell all the notifiees
 		if(notifiees()) {
@@ -109,6 +110,7 @@ Segment::arrivingShipmentIs(Fwk::Ptr<Shipment> &shipment)
 		}
 	}
 	else {
+		numShipmentsToldToWaitIs( ShipmentCount(numShipmentsToldToWait().value() + 1) );
 		// throw an exception
 		throw Fwk::RangeException("segment cannot accept shipment"); 
 	}
@@ -245,6 +247,7 @@ void RetryActivityReactor::onStatus() {
 					activity_->statusIs(Activity::nextTimeScheduled);
 				}
 				else {
+					segment_->numShipmentsRefusedIs( ShipmentCount(segment_->numShipmentsRefused().value() + 1) );
 					Statistics::Ptr stats = const_cast<Statistics*>(networkInstance()->statistics().ptr());
 					stats->droppedShipmentIs(shipment_);
 				}
@@ -1297,28 +1300,29 @@ Network::NotifieeConst::~NotifieeConst() {
 string
 Statistics::simulationStatisticsOutput() const
 {
-	cout << "===== Stats attributes =====" << endl;
-	cout << " --- Locations --- " << endl;
-    cout << "# Customers.......: " << numCustomers() << endl;
-    cout << "# Ports...........: " << numPorts() << endl;
-    cout << "# Truck terminals.: " << numTerminals(Segment::truck()) << endl;
-    cout << "# Boat terminals..: " << numTerminals(Segment::boat()) << endl;
-    cout << "# Plane terminals.: " << numTerminals(Segment::plane()) << endl;
-    cout << endl;
+	stringstream output;
+	output << "===== Stats attributes =====" << endl;
+	output << " --- Locations --- " << endl;
+    output << "# Customers.......: " << numCustomers() << endl;
+    output << "# Ports...........: " << numPorts() << endl;
+    output << "# Truck terminals.: " << numTerminals(Segment::truck()) << endl;
+    output << "# Boat terminals..: " << numTerminals(Segment::boat()) << endl;
+    output << "# Plane terminals.: " << numTerminals(Segment::plane()) << endl;
+    output << endl;
 
-    cout << " --- Segments --- " << endl;
-    cout << "# Truck segments : " << numSegments(Segment::truck()) << endl;
-    cout << "# Boat segments  : " << numSegments(Segment::boat()) << endl;
-    cout << "# Plane segments : " << numSegments(Segment::plane()) << endl;
-    cout << endl;
+    output << " --- Segments --- " << endl;
+    output << "# Truck segments : " << numSegments(Segment::truck()) << endl;
+    output << "# Boat segments  : " << numSegments(Segment::boat()) << endl;
+    output << "# Plane segments : " << numSegments(Segment::plane()) << endl;
+    output << endl;
 
-    cout << " --- Shipments --- " << endl;
-    cout << "# Shipments enroute   : " << numShipments(Statistics::enroute()) << endl;
-    cout << "# Shipments delivered : " << numShipments(Statistics::delivered()) << endl;
-    cout << "# Shipments dropped   : " << numShipments(Statistics::dropped()) << endl;
-    cout << endl;
+    output << " --- Shipments --- " << endl;
+    output << "# Shipments enroute   : " << numShipments(Statistics::enroute()) << endl;
+    output << "# Shipments delivered : " << numShipments(Statistics::delivered()) << endl;
+    output << "# Shipments dropped   : " << numShipments(Statistics::dropped()) << endl;
+    output << endl << endl;
 
-    cout << " --- Customers --- " << endl;
+    output << " --- Customers --- " << endl;
     Network::Ptr network = networkInstance();
     vector<Location::PtrConst> locations = network->locations();
     for (size_t i = 0; i < locations.size(); i++) {
@@ -1326,12 +1330,27 @@ Statistics::simulationStatisticsOutput() const
     		continue;
     	}
     	Customer::PtrConst customer = dynamic_cast<Customer const*>(locations[i].ptr());
-    	//cout << "# Shipments enroute   : " << numShipments(Statistics::enroute()) << endl;
-    	//cout << customer->name() << ":" << << " : " << customer->shiptmentsReceived().value() << endl;
+    	//output << "# Shipments enroute   : " << numShipments(Statistics::enroute()) << endl;
+    	output << "Source:Dest=" << customer->name() << ":" << customer->destination()->name() << " : "
+    	<< "#Received=" << customer->shipmentsReceived().value() << " "
+    	<< "avgLatency=" << customer->avgLatency().value() << " "
+    	<< "totalCost=" << customer->totalCost().value() << " "
+    	<< endl;
+    }
+    output << endl;
+
+	vector<Segment::PtrConst> segments = network->segments();
+    for (size_t i = 0; i < segments.size(); i++) {
+    	Segment::PtrConst segment = dynamic_cast<Segment const*>(segments[i].ptr());
+    	output << segment->name() << " : "
+    	<< "#Received=" << segment->numShipmentsReceived().value() << " "
+    	<< "#ToldToWait=" << segment->numShipmentsToldToWait().value() << " "
+    	<< "#Refused=" << segment->numShipmentsRefused().value() << " "
+    	<< endl;
     }
 
-    return string();
-    //cout << "Expediting %     : " << stats->attribute("expedite percentage") << endl;
+    return output.str();
+    //output << "Expediting %     : " << stats->attribute("expedite percentage") << endl;
 }
 
 void
