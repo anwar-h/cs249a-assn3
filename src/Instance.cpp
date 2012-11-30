@@ -77,6 +77,7 @@ string LocationRep::attribute(const string& name) {
 void LocationRep::attributeIs(const string& name, const string& v) {
     stringstream s;
     s <<"Attribute "<< name<<" not supported.";
+    cerr<<s<<endl;
     throw Fwk::AttributeNotSupportedException(s.str());
 }
 
@@ -137,6 +138,7 @@ public:
         else {
             stringstream s;
             s <<"Attribute "<< name<<" not supported.";
+            cerr<<s<<endl;
             throw Fwk::AttributeNotSupportedException(s.str());
         }
     }
@@ -347,6 +349,7 @@ void SegmentRep::attributeIs(const string& name, const string& v) {
     else {
         stringstream s;
         s <<"Attribute "<< name<<" not supported.";
+        cerr<<s<<endl;
         throw Fwk::AttributeNotSupportedException(s.str());
     }
 
@@ -444,6 +447,7 @@ public:
         else{
             stringstream s;
             s <<"Attribute "<< name<<" not supported.";
+            cerr<<s<<endl;
             throw Fwk::AttributeNotSupportedException(s.str());
         }
     }
@@ -681,6 +685,7 @@ cout<<"mode: " <<mode << " property: " << property<< endl;
     } else {
        stringstream s;
         s <<"Attribute "<< name<<" not supported.";
+        cerr<<s<<endl;
         throw Fwk::AttributeNotSupportedException(s.str());
     }
 
@@ -742,6 +747,7 @@ cout<<"mode: " <<mode << " property: " << property<< endl;
     else{
         stringstream s;
         s <<"Attribute "<< name<<" not supported.";
+        cerr<<s<<endl;
         throw Fwk::AttributeNotSupportedException(s.str());
     }
 }
@@ -846,6 +852,7 @@ Ptr<Instance> ManagerImpl::instanceNew(const string& name, const string& type) {
 
     stringstream s;
     s <<"Attribute "<< type<<" not supported.";
+    cerr<<s<<endl;
     throw Fwk::AttributeNotSupportedException(s.str());
 }
 
