@@ -36,10 +36,16 @@ try{
 
 	segments[0]->attributeIs("length", "3");
 	segments[1]->attributeIs("length", "3");
+	segments[0]->attributeIs("source", "customer1");
+	segments[1]->attributeIs("source", "terminal1");
 	segments[0]->attributeIs("return segment", "segment1r");
+	segments[0]->attributeIs("Capacity", "5");
+	segments[1]->attributeIs("Capacity", "5");
 
 	segments[2]->attributeIs("length", "2");
 	segments[3]->attributeIs("length", "2");
+	segments[2]->attributeIs("source", "terminal1");
+	segments[3]->attributeIs("source", "terminal2");
 	segments[2]->attributeIs("return segment", "segment2r");
 	segments[2]->attributeIs("Capacity", "9");
 	segments[3]->attributeIs("Capacity", "9");
@@ -47,6 +53,8 @@ try{
 
 	segments[4]->attributeIs("length", "1");
 	segments[5]->attributeIs("length", "1");
+	segments[4]->attributeIs("source", "terminal2");
+	segments[5]->attributeIs("source", "customer2");
 	segments[4]->attributeIs("return segment", "segment3r");
 	segments[4]->attributeIs("Capacity", "8");
 	segments[5]->attributeIs("Capacity", "8");
@@ -54,64 +62,52 @@ try{
 
 	segments[6]->attributeIs("length", "4");
 	segments[7]->attributeIs("length", "4");
+	segments[6]->attributeIs("source", "customer1");
+	segments[7]->attributeIs("source", "terminal3");
 	segments[6]->attributeIs("return segment", "segment4r");
+	segments[6]->attributeIs("Capacity", "10");
+	segments[7]->attributeIs("Capacity", "10");
 
 	segments[8]->attributeIs("length", "5");
 	segments[9]->attributeIs("length", "5");
+	segments[8]->attributeIs("source", "terminal3");
+	segments[9]->attributeIs("source", "customer2");
 	segments[8]->attributeIs("return segment", "segment5r");
 	segments[8]->attributeIs("Capacity", "8");
 	segments[9]->attributeIs("Capacity", "8");
 
 
-	locs[0]->attributeIs("Transfer Rate", "24");
+//	manager->instance("conn")->attributeIs("routing algorithm", "BFS");
+	manager->instance("conn")->attributeIs("routing algorithm", "dijkstra");
+
+	locs[0]->attributeIs("Transfer Rate", "144");
 	locs[0]->attributeIs("Shipment Size", "400");
 	locs[0]->attributeIs("Destination", "customer2");
 
-	Activity::Manager::Ptr activityManager = activityManagerInstance();
-	activityManager->nowIs(24);
+	Activity::Manager::Ptr activityManager = activityManagerInstance(manager->network());
+	//REAL TIME ACTIVITY MANAGER.  COMMENT OUT THE PREVIOUS LINE AND UNCOMMENT THE LINE BELOW TO ACTIVATE IT.
+//	Activity::Manager::Ptr activityManager = realTimeManagerInstance(manager->network());
+	activityManager->nowIs(10.0);
+	cout<<manager->instance("stats")->attribute("shipment output") << endl;
 
-	locs[0]->attributeIs("Transfer Rate", "0");
-	locs[1]->attributeIs("Transfer Rate", "12");
-	locs[1]->attributeIs("Shipment Size", "200");
-	locs[1]->attributeIs("Destination", "customer1");
 
-	activityManager->nowIs(48);
+	activityManager->nowIs(24.0);
+ 	cout<<manager->instance("stats")->attribute("shipment output") << endl;
+ 	
+ 	activityManager->nowIs(40.0);
+ 	cout<<manager->instance("stats")->attribute("shipment output") << endl;
+ 	
+ 	activityManager->nowIs(60.0);
+ 	cout<<manager->instance("stats")->attribute("shipment output") << endl;
+
+
+	cout<<manager->instance("stats")->attribute("stats output");
+
 }
 catch(Fwk::Exception e){
 	cout << e.what() << endl;
 }
-/*
-	loc.push_back( manager->instanceNew("customer2", "Customer") );
-    loc.push_back( manager->instanceNew("port1", "Port") );
-    loc.push_back( manager->instanceNew("tt1", "Truck terminal") );
-    loc.push_back( manager->instanceNew("tt2", "Truck terminal") );
-    loc.push_back( manager->instanceNew("customer3", "Customer") );
 
-	// Segments
-    seg.push_back( manager->instanceNew("ps1", "Plane segment") );
-    seg.push_back( manager->instanceNew("ps2", "Plane segment") );
-    seg.push_back( manager->instanceNew("bs1", "Boat segment") );
-    seg.push_back( manager->instanceNew("bs2", "Boat segment") );
-    seg.push_back( manager->instanceNew("ts1", "Truck segment") );
-    seg.push_back( manager->instanceNew("ts2", "Truck segment") );
-    seg.push_back( manager->instanceNew("ts3", "Truck segment") );
-    seg.push_back( manager->instanceNew("ts4", "Truck segment") );
-    seg.push_back( manager->instanceNew("ts5", "Truck segment") );
-    seg.push_back( manager->instanceNew("ts6", "Truck segment") );
-    seg.push_back( manager->instanceNew("ts7", "Truck segment") );
-    seg.push_back( manager->instanceNew("ts8", "Truck segment") );
-
-	// Connections...
-	seg[0]->attributeIs("source", "customer1");
-	seg[1]->attributeIs("source", "port1");
-	seg[1]->attributeIs("return segment", "ps1");
-
-	seg[2]->attributeIs("source", "customer2");
-	seg[2]->attributeIs("source", "port1");
-	seg[3]->attributeIs("return segment", "ps2");
-
-	// And so on...
-*/
 
 
 

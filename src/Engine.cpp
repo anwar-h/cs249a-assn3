@@ -888,7 +888,7 @@ Path::Ptr Connectivity::BFSShortestPath(Location::PtrConst &startLoc, Location::
 				if (copy->end()->name() == endLoc->name()) {
 					return copy;
 				}
-				//don't push onto the queue if it's not a customer
+				//don't push onto the queue if it's a customer
 				else if (nextLocation->locationType() != Location::customer()) pathQueue.push(copy);
 			}
 		}
@@ -905,6 +905,7 @@ Path::Ptr Connectivity::DijkstraShortestPath(Location::PtrConst &startLoc, Locat
 	priority_queue<Path::Ptr, vector<Path::Ptr>, PathDistanceComp> pathQueue;
 	pathQueue.push(startPath);
 
+	Path::Ptr minimumCostPath;
 
 	while(pathQueue.size() > 0) {
 		Path::Ptr curr = pathQueue.top();
@@ -923,14 +924,15 @@ Path::Ptr Connectivity::DijkstraShortestPath(Location::PtrConst &startLoc, Locat
 			if (curr->locationMembershipStatus(nextLocation) == Path::notMember()) {
 				Path::Ptr copy = copyPath(curr, fleet(), nextLocation, nextSegment);
 				if (copy->end()->name() == endLoc->name()) {
-					return copy;
+					if (!minimumCostPath) minimumCostPath = copy;
+					else if (copy->cost() < minimumCostPath->cost()) minimumCostPath = copy;
 				}
 				//don't push onto the queue if it's not a customer
 				else if (nextLocation->locationType() != Location::customer()) pathQueue.push(copy);
 			}
 		}
 	}
-	return Path::Ptr();
+	return minimumCostPath;
 }
 
 map<string, Path::Ptr> Connectivity::routes(RoutingMethod rm){
@@ -940,10 +942,19 @@ map<string, Path::Ptr> Connectivity::routes(RoutingMethod rm){
 	for(size_t i = 0; i < locs.size(); i++){
 		for(size_t j = 0; j < locs.size(); j++){
 			if (i == j) continue;
+			if (locs[i]->locationType() != Location::customer()) continue;
+			if (locs[j]->locationType() != Location::customer()) continue;
 
 			Path::Ptr shortPath;
+			
+
 			if (rm == dijkstra()) shortPath = DijkstraShortestPath(locs[i], locs[j]);
-			else if (rm == bfs()) shortPath = BFSShortestPath(locs[i], locs[j]);
+//			if (shortPath) cout<<__FILE__<<": Dijkstra "<< shortPath->stringValue();
+			else if (rm == bfs()){ shortPath = BFSShortestPath(locs[i], locs[j]);
+//				if(shortPath) cout<<__FILE__<<": BFS: "<< shortPath->stringValue();
+			}
+
+			//cout<<__FILE__<<": BFS: "<< BFSShortestPath(locs[i], locs[j])->stringValue();
 
 			if (shortPath){
 				stringstream key;
@@ -1304,11 +1315,22 @@ Network::NotifieeConst::~NotifieeConst() {
 }
 
 string
+Statistics::simulationShipmentStats() const
+{
+	stringstream output;
+	output << " --- Shipments --- " << endl;
+    output << "# Shipments enroute   : " << numShipments(Statistics::enroute()) << endl;
+    output << "# Shipments delivered : " << numShipments(Statistics::delivered()) << endl;
+    output << "# Shipments dropped   : " << numShipments(Statistics::dropped()) << endl;
+    return output.str();
+}
+
+string
 Statistics::simulationStatisticsOutput() const
 {
-cout << __FILE__ << ":" << __LINE__ << endl;
+//cout << __FILE__ << ":" << __LINE__ << endl;
 	stringstream output;
-	output << "===== Stats attributes =====" << endl;
+	output << "===== Simulation Results =====" << endl;
 	output << " --- Locations --- " << endl;
     output << "# Customers.......: " << numCustomers() << endl;
     output << "# Ports...........: " << numPorts() << endl;
@@ -1327,10 +1349,26 @@ cout << __FILE__ << ":" << __LINE__ << endl;
     output << "# Shipments enroute   : " << numShipments(Statistics::enroute()) << endl;
     output << "# Shipments delivered : " << numShipments(Statistics::delivered()) << endl;
     output << "# Shipments dropped   : " << numShipments(Statistics::dropped()) << endl;
-    output << endl << endl;
+    output << endl;
+
+    output << " --- Shipment Averages --- " << endl;
+    Network::Ptr network = network_;
+    vector<Segment::PtrConst> segments = network->segments();
+	size_t numReceived = 0, numWait = 0, numRefused = 0;
+    for (size_t i = 0; i < segments.size(); i++) {
+    	Segment::PtrConst segment = dynamic_cast<Segment const*>(segments[i].ptr());
+    	numReceived += segment->numShipmentsReceived().value();
+    	numWait += segment->numShipmentsToldToWait().value();
+    	numRefused += segment->numShipmentsRefused().value();
+    }
+
+	output
+	<< "AvgReceived=" << (float) numReceived / (float) segments.size() << " "
+	<< "AvgToldToWait=" << (float) numWait / (float) segments.size() << " "
+	<< "AvgRefused=" << (float) numRefused / (float) segments.size() << " "
+	<< endl << endl << endl;
 
     output << " --- Customers --- " << endl;
-    Network::Ptr network = network_;
     vector<Location::PtrConst> locations = network->locations();
     for (size_t i = 0; i < locations.size(); i++) {
     	if (locations[i]->locationType() != Location::customer()) {
@@ -1346,10 +1384,10 @@ cout << __FILE__ << ":" << __LINE__ << endl;
     	<< "totalCost=" << customer->totalCost().value() << " "
     	<< endl;
     }
-    output << endl;
+    output << endl << endl;
 
     output << " --- Segments --- " << endl;
-	vector<Segment::PtrConst> segments = network->segments();
+
     for (size_t i = 0; i < segments.size(); i++) {
     	Segment::PtrConst segment = dynamic_cast<Segment const*>(segments[i].ptr());
 
@@ -1359,7 +1397,6 @@ cout << __FILE__ << ":" << __LINE__ << endl;
     	<< "Refused=" << segment->numShipmentsRefused().value() << " "
     	<< endl;
     }
-
     return output.str();
     //output << "Expediting %     : " << stats->attribute("expedite percentage") << endl;
 }

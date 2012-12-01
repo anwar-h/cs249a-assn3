@@ -418,6 +418,9 @@ string StatsRep::attribute(const string& name){
     else if (name == "stats output"){
         return statistics_->simulationStatisticsOutput();
     }
+    else if (name == "shipment output") {
+        return statistics_->simulationShipmentStats();
+    }
     else {
         cerr<<"bad input"<<endl;
         return "";
@@ -676,8 +679,7 @@ string FleetRep::attribute(const string& name){
 void FleetRep::attributeIs(const string& name, const string& v) {
     string mode, property;
     getModeAndProperty(name, mode, property);
-cout<<name<<" "<<v<<endl;
-cout<<"mode: " <<mode << " property: " << property<< endl;
+
 
     Segment::Mode m;
     if (mode == "Truck"){

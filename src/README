@@ -6,13 +6,16 @@ DESCRIPTION
 
 PART 1:
 Exception Handling:
-In Assignment 2, we already put in exceptions in all of our ADTs, for if someone tried to assign an out-of-bounds value to them.  In addition to those exceptions, we added a little bit more exception handling to the rep layer, to warn the user of incorrect input instead of failing silently.
+We use exceptions in place of error codes.  You'll read more about our use of exceptions in segment, which is handled by locationreactor, much as an error code will be.  In Assignment 2, we already put in exceptions in all of our ADTs, for if someone tried to assign an out-of-bounds value to them.  In addition to those exceptions, we added a little bit more exception handling to the rep layer, to warn the user of incorrect input instead of failing silently.
+
 
 PART 2:
 Activities:
 We set up an activity manager to control the time of the simulation.
 
 PART 3:
+Note: The different "capacity" values were slightly unclear, so we used Fleet::Capacity as the number of packages each vehicle of that type can carry.  Segment capacity is the number of vehicles that can be traveling along that segment at any given time.
+
 Inject Activities:
 We create a customer location, which also creates a customer reactor.  The call to construct location (which is the base class for customer) creates a location reactor.  The customer reactor stores a pointer to the activity manager and its purpose is to check to see if all 3 attributes have been set on the customer (transfer rate (>0), shipment size(>0), and destination), and once they have it creates a new inject activity reactor and an associated activity for that location.  We calculate the time between shipments based on the transfer rate, and the inject activity reactor creates a new shipment every time that amount of time passes.  We then call arrivingShipmentIs on the customer, passing in this new shipment.
 
@@ -22,10 +25,10 @@ The locationreactor has an onShipmentArrival function which checks whether a shi
 
 In order to forward a shipment along, we need to find the correct segment to put that shipment on.  We look that up, and call arrivingShipmentIs on the corresponding segment.  The segment then checks whether it has space for that shipment by looking up its vehiclecount and the fleet's capacity for vehicles of its type.  If the current load of the segment + the size of this shipment < vehiclecount*vehicle capacity, then we increase the load on this segment, calculate how long it will take for these packages to cross, and schedule a forwarding activity for time (now + time to cross).  So at that next time, arrivingShipmentIs will be called on the next location in the path.  That location checks if it's the destination, and if so then yay!  If not, it passes it off to the next segment as described above.
 
-If there isn't enough space in the segment for this shipment, segment::arrivingshipmentis throws an exception, which pops us back up to locationReactor onShipmentArrival.  The locationReactor handles the exception by creating a retry activity.  The wait time starts out at 0.1 hours, the retry activity calls onShipmentArrival on the segment again. If that fails and an exception is thrown, which we handly by doing nothing, as the retry activity will just double its wait time automatically. Every time this retry activity tries and fails to resend the shipment, it doubles its wait time.  We continue doing this until we have waited for a day, at which point we drop the shipment.
+If there isn't enough space in the segment for this shipment, segment::arrivingshipmentis throws an exception, which pops us back up to locationReactor onShipmentArrival.  The locationReactor handles the exception by creating a retry activity.  The wait time starts out at a random value between 0.1 and 1.1 hours, the retry activity calls onShipmentArrival on the segment again. If that fails and an exception is thrown, which we handly by doing nothing, as the retry activity will just double its wait time automatically. Every time this retry activity tries and fails to resend the shipment, it doubles its wait time.  We continue doing this until we have waited for a day, at which point we drop the shipment.
 
 
-Real Time:
+PART 4: REAL TIME:
 The real time activity manager behaves very similarly to the sample one we were given.  It looks at the queue of activities, checks the time of the next activity it will need to run, and then sleeps for the time until then (multiplied by a scalling factor of 1,000,000microseconds, which means 1 second of real time corresponds to 1 hour of virtual time).
 
 
@@ -35,5 +38,130 @@ We use a static variable in the activity reactor to track if nowIs has been call
 Different times of day:
 Our fleet stores 2 different values for each of its attributes.  This is still compatible with Assignment 2.  When a user says fleet->attribute("speed") it returns the current speed, but when they say fleet->attribute("speed night") it returns the speed at night.  A user can set both day and night speed by saying fleet->attribute("speed", "10"), but when they say fleet->attributeIs("speed day", "10") that will only set the day speed.  We implemented this using activities that change the fleet timeOfDay attribute every 12 hours starting at 8am.
 
-  
+Statistics:
+At the end of each experiment, the client can print "Stats Output", which prints out general statistics about the network plus information about each individual location and segment.
+
+
+EXPERIMENT:
+
+With equal sized shipments, after 72 hours:
+ --- Shipments --- 
+# Shipments enroute   : 822
+# Shipments delivered : 2233
+# Shipments dropped   : 45
+
+ --- Shipment Averages --- 
+AvgReceived=34.9369 AvgToldToWait=23.2793 AvgRefused=0.202703 
+
+ --- Customers --- 
+'destcustomer'->'' : Received=2233 avgLatency=15 totalCost=669900 
+
+
+
+With random sized shipments after 72 hours:
+  --- Shipments --- 
+# Shipments enroute   : 1353
+# Shipments delivered : 864
+# Shipments dropped   : 883
+ --- Shipment Averages --- 
+AvgReceived=18.5676 AvgToldToWait=73.7162 AvgRefused=3.97748 
+ --- Customers --- 
+'destcustomer'->'' : Received=864 avgLatency=15 totalCost=259200 
+
+With uniform shipment size, most shipments were received at the destination.  We had relatively low congestion on the segments that were further away, but congestion increased on the segments as we got closer to the destination.  When we varied the package size, we noticed a dramatic increase in the number of shipments that had to wait and were then dropped after 24 hours.  We think this might be because the shipments were of non-uniform size, and there were some very very large shipments.  That would dramatially reduce the available capacity on a segment.  Before, we had a lot of shipments, but we could still pack them into the trucks.  Now, it only takes one shipment on a segment to back everything up.
+
+
+VERIFICATION:
+
+We built a simple network (diagram attached), with 2 customers and 2 boat terminals.  We ran it with the same fleet/shipment attributes, having customer1 send packages to customer2, with Dijkstra and BFS, to compare the results:
+Dijkstra:
+ --- Shipments --- 
+# Shipments enroute   : 83
+# Shipments delivered : 36
+# Shipments dropped   : 61
+
+ --- Shipment Averages --- 
+AvgReceived=11.6 AvgToldToWait=106.9 AvgRefused=6.1 
+
+ --- Customers --- 
+'customer1'->'customer2' : Received=0 avgLatency=0 totalCost=0 
+'customer2'->'' : Received=36 avgLatency=6 totalCost=216 
+
+
+BFS:
+ --- Shipments --- 
+# Shipments enroute   : 89
+# Shipments delivered : 20
+# Shipments dropped   : 71
+
+ --- Shipment Averages --- 
+AvgReceived=5.2 AvgToldToWait=120.5 AvgRefused=7.1 
+
+ --- Customers --- 
+'customer1'->'customer2' : Received=0 avgLatency=0 totalCost=0 
+'customer2'->'' : Received=20 avgLatency=9 totalCost=180 
+
+Dijkstra takes a path that's shorter than BFS, which means it's able to transport shipments faster.  Faster shipping means shorter wait times and therefore less dropped shipments!
+
+
+We varied the load, by doubling the size of our shipments from 400 to 800 packages, and ran it on Dijkstra again:
+ --- Shipments --- 
+# Shipments enroute   : 87
+# Shipments delivered : 18
+# Shipments dropped   : 75
+
+ --- Shipment Averages --- 
+AvgReceived=5.8 AvgToldToWait=118 AvgRefused=7.5 
+
+ --- Customers --- 
+'customer1'->'customer2' : Received=0 avgLatency=0 totalCost=0 
+'customer2'->'' : Received=18 avgLatency=6 totalCost=108 
+
+This meant half as many shipments got delivered by the end of 72 hours, 14 more got dropped, and 4 more were waiting.  Not too bad.
+
+We upped it to 1000, and nothing got delivered at all, because our shipping network will not split up shipments, and none of our segments was big enough to handle a single shipment.
+
+
+We then put our shipment size back down but increased the transfer rate to 144 shipments per day:
+ --- Shipments --- 
+# Shipments enroute   : 179
+# Shipments delivered : 36
+# Shipments dropped   : 146
+
+ --- Shipment Averages --- 
+AvgReceived=11.6 AvgToldToWait=231.7 AvgRefused=14.6 
+
+
+ --- Customers --- 
+'customer1'->'customer2' : Received=0 avgLatency=0 totalCost=0 
+'customer2'->'' : Received=36 avgLatency=6 totalCost=216 
+
+
+The theory is that more frequent smaller packages will back up the network, but not as much as larger shipment sizes do, because they can get split up.  Yes, we delivered the same number of shipments as in the example with less frequent packages, which means more waiting and more dropped shipments, but unlike the larger shipping sizes, some shipments are still getting through.
+
+
+We modified the segment capacity of Segment1 to be 5 instead of 10.
+ --- Shipments --- 
+# Shipments enroute   : 195
+# Shipments delivered : 18
+# Shipments dropped   : 148
+
+ --- Shipment Averages --- 
+AvgReceived=5.8 AvgToldToWait=242.3 AvgRefused=14.8 
+
+
+ --- Customers --- 
+'customer1'->'customer2' : Received=0 avgLatency=0 totalCost=0 
+'customer2'->'' : Received=18 avgLatency=6 totalCost=108 
+
+This decreased the number of shipments delivered and slightly increased the number of shipments enroute.  It's about the same as the results with more frequent smaller packages.
+
+
+
+
+
+
+
+
+
 

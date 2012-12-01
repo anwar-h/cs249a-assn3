@@ -70,16 +70,17 @@ namespace ActivityImpl {
 
 		if (!beenHere) {
 			beenHere = true;
-			cout <<__FILE__<<":"<< __LINE__<< " doing preprocess" << endl;
+			//cout <<__FILE__<<":"<< __LINE__<< " doing preprocess" << endl;
 			
 			//cout << "network=" << network.ptr() << endl;
 			//cout << "conn=" << network->connectivity().ptr() << endl;
 			Shipping::Connectivity::Ptr c = const_cast<Shipping::Connectivity*>(network_->connectivity().ptr());
 			c->simulationStatusIs(Shipping::Connectivity::running());
-			cout <<__FILE__<<":"<< __LINE__<< " end preprocess" << endl;
+			//cout <<__FILE__<<":"<< __LINE__<< " end preprocess" << endl;
 		}
 
 		if (t < now_) return;
+		cout << "Time is " << t.value() << endl;
 		
 		//find the most recent activites to run and run them in order
 		while (!scheduledActivities_.empty()) {
@@ -97,8 +98,9 @@ namespace ActivityImpl {
 			Time diff = Time(nextToRun->nextTime().value() - now_.value());
 			
 			if (managerType() == ManagerImpl::realtime()) {
+				//cout << "going to sleep" << endl;
 				//sleep 1s (1,000,000 microseconds) for every unit of time
-				usleep(( ((int)diff.value()) * 1000000 ));
+				usleep(( (diff.value()) * 200000 ));
 			}
 			
 			now_ = nextToRun->nextTime();
@@ -110,7 +112,7 @@ namespace ActivityImpl {
 			nextToRun->statusIs(Activity::free);
 
 		}
-
+		
 		//syncrhonize the time
 		now_ = t;
 	}

@@ -1245,11 +1245,12 @@ public:
 		return simulation_status_;
 	}
 	void simulationStatusIs(SimulationStatus s) {
-		cout <<__FILE__<<":"<< __LINE__<< " inside simulationStatusIs()" << endl;
+		//cout <<__FILE__<<":"<< __LINE__<< " inside simulationStatusIs()" << endl;
 		if(simulationStatus() == off() && s == running()) { //simulation is starting
-			cout <<__FILE__<<":"<< __LINE__<< " doing dijkstra()" << endl;
+			cout << "Preprocessing Network......" << endl;
+			//cout <<__FILE__<<":"<< __LINE__<< " doing dijkstra()" << endl;
 			routes_dijkstra_ = routes(dijkstra());
-			cout <<__FILE__<<":"<< __LINE__<< " doing bfs()" << endl;
+			//cout <<__FILE__<<":"<< __LINE__<< " doing bfs()" << endl;
 			routes_bfs_ = routes(bfs());
 		}
 		simulation_status_ = s;
@@ -1497,6 +1498,7 @@ public:
 
 	float percentExpeditedSegments();
 
+	string simulationShipmentStats() const;
 	string simulationStatisticsOutput() const;
 	
 
